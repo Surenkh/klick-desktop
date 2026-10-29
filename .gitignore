@@ -9,3 +9,4 @@ assets/icon.iconset/
 .keys/
 .electron-builder-cache/
 incoming/
+.electron-x64/

@@ -1,11 +1,16 @@
 # Installing Klick on macOS
 
-Download `Klick-0.1.0-arm64.dmg` from the Releases page, open it, and drag
-**Klick.app** onto the **Applications** folder in the window.
+Download the DMG for your Mac and drag **Klick.app** onto the Applications folder:
 
-The build is **arm64** (Apple silicon) and **unsigned** (no Apple Developer ID
-yet), so macOS will ask you to confirm the first launch. That is expected and
-takes one click:
+| Mac | File |
+| --- | --- |
+| Apple silicon (M1/M2/M3/M4) | `Klick-0.2.0-arm64.dmg` |
+| Intel | `Klick-0.2.0-x64.dmg` |
+
+Not sure which? Apple menu →  About This Mac → the *Chip* line says Apple M… or Intel.
+
+The build is **unsigned** (no Apple Developer ID yet), so macOS will ask you to confirm
+the first launch. That is expected and takes one click:
 
 1. Open **Klick** from Applications. macOS says it cannot verify the app → **Done**.
 2. **System Settings → Privacy & Security**, scroll to Security, and click
@@ -32,8 +37,10 @@ and no network code in the app at all.
 ## Verify the download (optional)
 
 ```
-shasum -a 256 Klick-0.1.0-arm64.dmg
-# 1c9b0739a66575169ebf64ee36bd271cee3b0dc547dee035fcda18245f302c2d
+shasum -a 256 Klick-0.2.0-arm64.dmg
+# 3cd0ba7b4eb61b603792226c4c0c059c232abe8ed620a1521f324853a4655f46
+shasum -a 256 Klick-0.2.0-x64.dmg
+# 96135be43cbcfb2ad84dda4904c0bd1121f561bdeeb1547b573b40c7821dbf28
 ```
 
 ## Uninstall

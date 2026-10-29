@@ -6,7 +6,7 @@
 const path = require('node:path');
 const { BrowserWindow, screen } = require('electron');
 
-const BUDDY_SIZE = 158;
+const BUDDY_SIZE = 118;   // 97 px character + room for the drift and confetti
 
 function createWindows({ appRoot, preloadPath, getSettings, onBuddyMoved, log }) {
   let audio = null;

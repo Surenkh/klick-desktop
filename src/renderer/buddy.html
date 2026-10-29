@@ -14,9 +14,16 @@
         -webkit-app-region: drag;
       }
 
-      /* the character: two layers so state changes crossfade instead of snap */
+      /* #float does the weightless drift, #char does the press/pop squash, so
+         the two never fight over the same transform */
+      #float {
+        width: 97px; height: 97px;
+        transform-origin: 50% 62%;
+        animation: drift 13s cubic-bezier(.45, .05, .55, .95) infinite;
+        will-change: transform;
+      }
       #char {
-        position: relative; width: 138px; height: 138px;
+        position: relative; width: 100%; height: 100%;
         transform-origin: 50% 78%;
         transition: transform 130ms cubic-bezier(.22, .8, .3, 1);
         will-change: transform;
@@ -32,11 +39,15 @@
       #char.press { transform: translateY(3px) scale(.955); }
       #char.pop    { animation: pop 380ms cubic-bezier(.22, .9, .3, 1.25); }
       #char.enter  { animation: enter 420ms cubic-bezier(.22, .9, .3, 1.2); }
-      #char.idle-bob { animation: bob 4.8s ease-in-out infinite; }
-
-      @keyframes bob {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50%      { transform: translateY(-3px) rotate(-.4deg); }
+      /* no gravity: a slow, slightly irregular hover rather than a bob */
+      @keyframes drift {
+        0%   { transform: translate3d(0, 0, 0) rotate(-0.5deg); }
+        18%  { transform: translate3d(2.5px, -4px, 0) rotate(0.6deg); }
+        37%  { transform: translate3d(-1px, -7px, 0) rotate(-0.3deg); }
+        55%  { transform: translate3d(-4px, -4.5px, 0) rotate(-0.9deg); }
+        74%  { transform: translate3d(-2px, -1.5px, 0) rotate(0.5deg); }
+        88%  { transform: translate3d(1.5px, -2.5px, 0) rotate(0.2deg); }
+        100% { transform: translate3d(0, 0, 0) rotate(-0.5deg); }
       }
       @keyframes pop {
         0%   { transform: scale(1); }
@@ -86,7 +97,7 @@
       #gear:hover { background: rgba(255,255,255,.2); }
 
       @media (prefers-reduced-motion: reduce) {
-        #char.idle-bob { animation: none; }
+        #float { animation: none; }
         #char.pop, #char.enter { animation: none; }
         #char, .klick { transition: none; }
       }
@@ -94,9 +105,11 @@
   </head>
   <body>
     <div id="stage">
-      <div id="char" hidden>
-        <img class="klick" id="k0" alt="Kiki" />
-        <img class="klick" id="k1" alt="" />
+      <div id="float">
+        <div id="char" hidden>
+          <img class="klick" id="k0" alt="Kiki" />
+          <img class="klick" id="k1" alt="" />
+        </div>
       </div>
       <div class="cap" id="cap">
         <div class="face">
@@ -194,9 +207,6 @@
           setTimeout(swap, 250);
         }
 
-        // the animated loop floats by itself; the static idle needs a hand
-        const bob = !useAnim && state === 'idle' && !reduceMotion;
-        char.classList.toggle('idle-bob', !!bob);
       }
 
       function toIdle(pop) {

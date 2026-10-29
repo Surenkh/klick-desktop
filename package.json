@@ -1,7 +1,7 @@
 {
   "name": "klick",
   "productName": "Klick",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keyboard sounds with Kiki, your little keycap companion - macOS and Windows.",
   "main": "src/main/index.js",
   "author": "Suren",
@@ -109,6 +109,7 @@
     "publish": null,
     "electronDist": "node_modules/electron/dist",
     "npmRebuild": false,
-    "buildDependenciesFromSource": false
+    "buildDependenciesFromSource": false,
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   }
 }
