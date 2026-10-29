@@ -13,7 +13,8 @@
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
     "test": "node scripts/test-keys.js && node scripts/test-agents.js",
-    "build:native": "clang -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -framework IOKit -framework CoreGraphics -framework CoreFoundation -o native/bin/klick-keys native/klick-keys.c"
+    "build:native": "clang -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -framework IOKit -framework CoreGraphics -framework CoreFoundation -o native/bin/klick-keys native/klick-keys.c",
+    "dist:dmg": "sh scripts/make-dmg.sh"
   },
   "dependencies": {
     "uiohook-napi": "^1.5.5"
