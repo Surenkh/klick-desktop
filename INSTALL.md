@@ -1,7 +1,7 @@
 # Installing Klick on macOS
 
-Download `Klick-0.1.0-arm64.zip` from the Releases page, unzip it, and drag
-**Klick.app** into **Applications**.
+Download `Klick-0.1.0-arm64.dmg` from the Releases page, open it, and drag
+**Klick.app** onto the **Applications** folder in the window.
 
 The build is **arm64** (Apple silicon) and **unsigned** (no Apple Developer ID
 yet), so macOS will ask you to confirm the first launch. That is expected and
@@ -32,8 +32,8 @@ and no network code in the app at all.
 ## Verify the download (optional)
 
 ```
-shasum -a 256 Klick-0.1.0-arm64.zip
-# 3d995cfa4ad25b3ee0438429ff35e1367960cc17bc6d683fd89ca89a42802c28
+shasum -a 256 Klick-0.1.0-arm64.dmg
+# 1c9b0739a66575169ebf64ee36bd271cee3b0dc547dee035fcda18245f302c2d
 ```
 
 ## Uninstall
