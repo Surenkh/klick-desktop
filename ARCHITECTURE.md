@@ -5,46 +5,45 @@ server, no telemetry, no network code at all in this build.
 
 ```
 ┌──────────────────────── main process ────────────────────────┐
-│ index.js        composition root: order + wiring only        │
-│ windows.js      audio / Kiki / Settings windows, placement   │
-│ tray.js         menu bar menu                                │
-│ ipc.js          one table of renderer → main calls           │
-│ audio-bus.js    the only path to the audio renderer          │
-│ cues.js         agent cue routing (recorded + pack notes)    │
-│ agent-server.js local socket that the agent shim writes to   │
-│ agents.js       hook install/remove, shim, backups           │
-│ packs.js        pack + cue file access                      │
-│ store.js        settings/stats, debounced persistence        │
-│ logger.js       console + capped log file                    │
-│ keyboard/                                                    │
-│   index.js      platform facade: one onKey({type,role,pan}) │
-│   mac.js        spawns ../../native/bin/klick-keys           │
-│   win.js        uiohook adapter (Windows)                    │
-│   hid.js        HID usage → role + stereo column (pure)      │
-│   uiohook-map.js keycode → role + stereo column (pure)       │
-└──────────────────────────────────────────────────────────────┘
-        │ spawn + stdout lines              │ IPC (small JSON)
-        ▼                                   ▼
-┌─ native/bin/klick-keys (C, universal) ─┐  ┌──────── renderers ────────┐
-│ IOHIDManager, observe-only            │  │ audio.html  WebAudio      │
-│ prints: access/ready/d <usage>/u <usage>│ │ buddy.html  Kiki          │
-│ never intercepts, never blocks input  │  │ settings.html  UI         │
-└───────────────────────────────────────┘  └───────────────────────────┘
+│ index.js        composition root: order + wiring only         │
+│ windows.js      audio / Kiki / Settings windows, placement    │
+│ tray.js         menu bar menu                                 │
+│ ipc.js          one table of renderer → main calls            │
+│ audio-bus.js    the only path to the audio renderer           │
+│ cues.js         agent cue routing (recorded + pack notes)     │
+│ agent-server.js local socket that the agent shim writes to    │
+│ agents.js       hook install/remove, shim, backups            │
+│ packs.js        pack + cue file access                        │
+│ store.js        settings/stats, debounced persistence         │
+│ logger.js       console + capped log file                      │
+│ keyboard/                                                     │
+│   index.js      platform facade: one onKey({type,role,pan})   │
+│   mac.js        drives the in-process addon                   │
+│   win.js        uiohook adapter (Windows)                     │
+│   macos-keycodes.js  virtual keycode → role + stereo column    │
+│   uiohook-map.js     keycode → role + stereo column (Windows)  │
+└───────────────────────────────────────────────────────────────┘
+        │                                     │ IPC (small JSON)
+        ▼                                     ▼
+┌─ native/klick-capture.node (in-process) ─┐  ┌──── renderers ────┐
+│ N-API addon, listen-only CGEventTap      │  │ audio  WebAudio   │
+│ cannot modify or block events            │  │ buddy  Kiki       │
+│ uses Klick.app's own TCC identity        │  │ settings  UI      │
+└──────────────────────────────────────────┘  └───────────────────┘
 ```
 
-## Why a native helper instead of an event tap
+## Why capture lives inside the app
 
-| | event tap (uiohook) | IOHIDManager helper (used on macOS) |
+| | separate helper binary | in-process addon (current) |
 | --- | --- | --- |
-| Permission | Accessibility **and** Input Monitoring | **Input Monitoring only** |
-| Can it block input? | yes, while the callback runs | never — it only observes reports |
-| Worst case | system-wide input stall | key sounds stop |
-| Crash risk | inside the UI process | separate process, restarts on its own |
+| Input Monitoring identity | its own, so the app's grant does not apply — it reported "no permission" forever | the app's, so the grant works |
+| Entries in System Settings | duplicates, one per build | one |
+| Failure mode | a tap can be created without permission and silently deliver nothing | status comes from the real tap state |
+| Crash risk | separate process | shared with the app (guarded by `watch()`) |
 
-That is the entire trust argument: Klick cannot intercept, delay or drop a
-keystroke, and it asks for one permission that macOS explains as "can see what
-you type". Windows keeps uiohook because a low-level hook needs no permission
-there.
+The tap is **listen-only** (`kCGEventTapOptionListenOnly`): the OS forbids it from
+modifying or blocking events, so Klick cannot delay or swallow a keystroke. That is
+also why only Input Monitoring is needed — an active tap would require Accessibility.
 
 ## Data flow for one key press
 

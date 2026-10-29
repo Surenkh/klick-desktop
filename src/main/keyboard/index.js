@@ -8,8 +8,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { classifyHID } = require('./hid');
-const { MacKeyboard } = require('./mac');
+const { classifyKeycode } = require('./macos-keycodes');
+const { MacCapture } = require('./mac');
 const { WinKeyboard } = require('./win');
 
 function helperPath({ appRoot, resourcesPath }) {
@@ -22,28 +22,23 @@ function createKeyboard({ platform = process.platform, appRoot, resourcesPath, l
   let impl;
 
   if (platform === 'darwin') {
-    impl = new MacKeyboard({
-      binary: helperPath({ appRoot, resourcesPath }),
+    impl = new MacCapture({
+      addonPath: path.join(appRoot, 'native', 'klick-capture.node'),
       log,
-      onDown: (usage) => {
-        const { role, pan } = classifyHID(usage);
-        onKey({ type: 'down', role, pan, usage });
+      onDown: (id) => {
+        if (id === -1) {                       // left mouse button
+          onKey({ type: 'down', role: 'click', pan: 0, mouse: true });
+          return;
+        }
+        const { role, pan } = classifyKeycode(id);
+        onKey({ type: 'down', role, pan, usage: id });
       },
-      onUp: (usage) => {
-        const { role, pan } = classifyHID(usage);
-        onKey({ type: 'up', role, pan, usage });
+      onUp: (id) => {
+        const { role, pan } = classifyKeycode(id);
+        onKey({ type: 'up', role, pan, usage: id });
       },
       onStatus
     });
-    // the helper also reports mouse buttons ("b 1"); surface them as clicks
-    const original = impl.handleLine.bind(impl);
-    impl.handleLine = (line) => {
-      if (line.startsWith('b ')) {
-        onKey({ type: 'down', role: 'click', pan: 0, mouse: true });
-        return;
-      }
-      original(line);
-    };
   } else {
     impl = new WinKeyboard({
       log,

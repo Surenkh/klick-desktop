@@ -13,7 +13,7 @@
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
     "test": "node scripts/test-keys.js && node scripts/test-agents.js",
-    "build:native": "clang -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -framework IOKit -framework CoreGraphics -framework CoreFoundation -o native/bin/klick-keys native/klick-keys.c",
+    "build:native": "clang -shared -fPIC -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -I\"$HOME/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/node/include/node\" -undefined dynamic_lookup -framework ApplicationServices -framework CoreFoundation -o native/klick-capture.node native/capture.c",
     "dist:dmg": "sh scripts/make-dmg.sh"
   },
   "dependencies": {
@@ -31,6 +31,7 @@
       "buildResources": "assets"
     },
     "files": [
+      "native/**/*",
       "src/**/*",
       "assets/buddy/**/*",
       "assets/packs/**/*",
@@ -42,13 +43,10 @@
       {
         "from": "src/main/hook.js",
         "to": "hook.js"
-      },
-      {
-        "from": "native/bin/klick-keys",
-        "to": "klick-keys"
       }
     ],
     "asarUnpack": [
+      "**/*.node",
       "**/node_modules/uiohook-napi/**"
     ],
     "mac": {
@@ -76,7 +74,8 @@
         "LSApplicationCategoryType": "public.app-category.utilities",
         "NSHighResolutionCapable": true
       },
-      "identity": null
+      "identity": "-",
+      "hardenedRuntime": false
     },
     "win": {
       "icon": "assets/icon.png",

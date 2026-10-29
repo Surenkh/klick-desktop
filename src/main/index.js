@@ -3,7 +3,7 @@
 // lives in the modules beside it; this file only decides order and connections.
 
 const path = require('node:path');
-const { app, globalShortcut, nativeImage, ipcMain, shell } = require('electron');
+const { app, globalShortcut, nativeImage, ipcMain, shell, powerSaveBlocker } = require('electron');
 
 const store = require('./store');
 const { createLogger } = require('./logger');
@@ -148,6 +148,14 @@ if (!app.requestSingleInstanceLock()) {
       store.merge({ pack: fallback });
     }
 
+    // a hidden window's audio graph can be suspended by the OS; this keeps it alive
+    try {
+      powerSaveBlocker.start('prevent-app-suspension');
+      log('power save blocker on (audio stays awake)');
+    } catch (err) {
+      log(`power save blocker failed: ${err.message}`);
+    }
+
     windows = createWindows({
       appRoot: APP_ROOT,
       preloadPath: PRELOAD,
@@ -253,4 +261,4 @@ app.on('before-quit', () => {
   try { store.flush(); } catch {}
 });
 process.on('uncaughtException', (err) => log(`uncaught: ${err.stack || err.message}`));
-process.on('unhandledRejection', (err) => log(`unhandled rejection: ${err && err.message}`));
+process.on('unhandledRejection', (err) => log(`unhandled rejection: ${err && (err.stack || err.message)}`));

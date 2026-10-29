@@ -38,7 +38,13 @@ async function load(pack) {
   return promise;
 }
 
+async function ensureRunning() {
+  if (ctx.state === 'running') return;
+  try { await ctx.resume(); } catch (err) { console.error('[audio] resume failed', err.message); }
+}
+
 async function playCue(msg) {
+  await ensureRunning();
   const buffer = cues[msg.name];
   if (!buffer) return;
   const gain = ctx.createGain();
@@ -86,6 +92,15 @@ async function loadCues() {
 
 loadCues();
 window.klick.onPlay(play);
+
+// Chromium can suspend a hidden window's audio graph; keep it awake and log it
+setInterval(() => {
+  if (ctx.state !== 'running') {
+    console.log('[audio] context', ctx.state, '- resuming');
+    ctx.resume().catch(() => {});
+  }
+}, 2000);
+ctx.onstatechange = () => console.log('[audio] context state', ctx.state);
 window.klick.onSettings((cfg) => {
   if (cfg && cfg.pack) load(cfg.pack); // warm the cache for the next press
 });

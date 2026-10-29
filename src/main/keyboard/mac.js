@@ -1,121 +1,124 @@
 'use strict';
-// macOS key capture through the klick-keys helper (IOHIDManager).
+// macOS capture inside the app process, via the klick-capture N-API addon.
 //
-// No event tap, no Accessibility, no input interception: the helper observes HID
-// reports, and macOS asks only for Input Monitoring. If the user grants it while
-// Klick is running, the helper notices by itself and starts sending keys.
+// In-process is the point: macOS grants Input Monitoring to the Klick.app bundle,
+// so the tap created here uses exactly that grant. A separate helper process has
+// its own identity, which is why it kept reporting "no permission" after the user
+// had granted it (and why two entries appeared in System Settings).
+//
+// The tap is LISTEN-ONLY: it may not modify or block events.
+// If permission is missing we retry once a second, so granting it starts capture
+// without a restart.
 
-const { spawn } = require('node:child_process');
-const fs = require('node:fs');
 const path = require('node:path');
 
-const RESTART_MS = 4000;
+const RETRY_MS = 1000;
 
-class MacKeyboard {
-  constructor({ binary, onDown, onUp, onStatus, log }) {
-    this.binary = binary;
+class MacCapture {
+  constructor({ addonPath, onDown, onUp, onStatus, log }) {
+    this.addonPath = addonPath;
     this.onDown = onDown;
     this.onUp = onUp;
     this.onStatus = onStatus;
     this.log = log || (() => {});
-    this.child = null;
-    this.status = { ok: false, platform: 'darwin', reason: 'starting' };
+    this.addon = null;
+    this.started = false;
     this.stopped = false;
-    this.restartTimer = null;
+    this.timer = null;
+    this.status = { ok: false, platform: 'darwin', reason: 'starting' };
+  }
+
+  load() {
+    if (this.addon) return this.addon;
+    try {
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      this.addon = require(this.addonPath);
+      this.log(`capture addon loaded (${path.basename(this.addonPath)})`);
+    } catch (err) {
+      this.log(`capture addon failed to load: ${err.message}`);
+      this.addon = null;
+    }
+    return this.addon;
   }
 
   start() {
     if (this.stopped) return;
-    if (!fs.existsSync(this.binary)) {
-      this.setStatus({ ok: false, reason: 'helper-missing' });
-      this.log(`key helper missing: ${this.binary}`);
+    const addon = this.load();
+    if (!addon) {
+      this.setStatus({ ok: false, reason: 'addon-missing' });
       return;
     }
-    let child;
-    try {
-      child = spawn(this.binary, [], { stdio: ['ignore', 'pipe', 'pipe'] });
-    } catch (err) {
-      this.setStatus({ ok: false, reason: 'spawn-failed' });
-      this.log(`key helper spawn failed: ${err.message}`);
-      this.scheduleRestart();
-      return;
-    }
-    this.child = child;
-    this.setStatus({ ok: false, reason: 'starting' });
 
-    let buffer = '';
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => {
-      buffer += chunk;
-      let nl;
-      while ((nl = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        if (line) this.handleLine(line);
-      }
+    if (!addon.preflight()) {
+      this.setStatus({ ok: false, reason: 'permission' });
+      try { addon.request(); } catch {}
+      this.armRetry();
+      return;
+    }
+
+    if (this.started) return;
+    addon.start((code, down) => {
+      if (down) this.onDown(code);
+      else this.onUp(code);
     });
-    child.stderr.on('data', (d) => this.log(`key helper stderr: ${String(d).trim()}`));
-    child.on('exit', (code) => {
-      this.child = null;
-      if (this.stopped) return;
-      this.setStatus({ ok: false, reason: `exited-${code}` });
-      this.scheduleRestart();
-    });
+    this.started = true;
+    // preflight passed, so the grant exists; the tap thread sets its own state a
+    // moment later. Report success now, and let watch() correct a real failure.
+    this.setStatus({ ok: true, reason: null });
+    this.log('capture started (listen-only tap, in-process)');
+    setTimeout(() => {
+      if (this.stopped || !this.addon) return;
+      const state = this.addon.status();
+      if (state === 2) this.setStatus({ ok: false, reason: 'permission' });
+      else if (state === 3) this.setStatus({ ok: false, reason: 'tap-failed' });
+      else this.setStatus({ ok: true, reason: null });
+    }, 400);
+    this.watch();
   }
 
-  handleLine(line) {
-    if (line === 'ready') {
-      this.setStatus({ ok: true, reason: null });
-      return;
-    }
-    if (line === 'waiting') {
-      this.setStatus({ ok: false, reason: 'permission' });
-      return;
-    }
-    if (line === 'access missing') {
-      this.setStatus({ ok: false, reason: 'permission' });
-      return;
-    }
-    if (line === 'access granted') {
-      this.log('input monitoring granted');
-      return;
-    }
-    if (line.startsWith('error')) {
-      this.setStatus({ ok: false, reason: line });
-      this.log(`key helper: ${line}`);
-      return;
-    }
-    if (line.startsWith('device')) return;
-    const [kind, usageText] = line.split(' ');
-    const usage = Number(usageText);
-    if (!Number.isFinite(usage)) return;
-    if (kind === 'd') this.onDown(usage);
-    else if (kind === 'u') this.onUp(usage);
+  watch() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      if (this.stopped) return;
+      const addon = this.addon;
+      if (!addon) return;
+      const state = addon.status();
+      if (state === 2) this.setStatus({ ok: false, reason: 'permission' });
+      else if (state === 3) this.setStatus({ ok: false, reason: 'tap-failed' });
+      else if (state === 1) this.setStatus({ ok: true, reason: null });
+      this.watch();
+    }, 3000);
+  }
+
+  armRetry() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      if (this.stopped) return;
+      if (this.addon && this.addon.preflight()) {
+        this.log('input monitoring granted; starting capture');
+        this.start();
+      } else {
+        this.armRetry();
+      }
+    }, RETRY_MS);
   }
 
   setStatus(next) {
     const merged = { ...next, platform: 'darwin' };
     if (JSON.stringify(merged) === JSON.stringify(this.status)) return;
     this.status = merged;
+    this.log(`keyboard status: ok=${merged.ok} reason=${merged.reason || '-'}`);
     this.onStatus(merged);
-  }
-
-  scheduleRestart() {
-    if (this.stopped || this.restartTimer) return;
-    this.restartTimer = setTimeout(() => {
-      this.restartTimer = null;
-      this.start();
-    }, RESTART_MS);
   }
 
   stop() {
     this.stopped = true;
-    if (this.restartTimer) clearTimeout(this.restartTimer);
-    if (this.child) {
-      try { this.child.kill('SIGTERM'); } catch {}
-      this.child = null;
+    clearTimeout(this.timer);
+    if (this.addon && this.started) {
+      try { this.addon.stop(); } catch {}
     }
+    this.started = false;
   }
 }
 
-module.exports = { MacKeyboard };
+module.exports = { MacCapture };

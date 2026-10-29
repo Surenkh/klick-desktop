@@ -4,7 +4,7 @@
 //   node scripts/test-keys.js
 
 const path = require('node:path');
-const { classifyHID } = require(path.join(__dirname, '..', 'src', 'main', 'keyboard', 'hid.js'));
+const { classifyKeycode } = require(path.join(__dirname, '..', 'src', 'main', 'keyboard', 'macos-keycodes.js'));
 const { classify } = require(path.join(__dirname, '..', 'src', 'main', 'keyboard', 'uiohook-map.js'));
 
 let failures = 0;
@@ -13,30 +13,26 @@ const check = (name, cond, detail) => {
   if (!cond) failures += 1;
 };
 
-// --- macOS HID usages -------------------------------------------------------
-const cas = (usage, role) => check(`HID ${usage} -> ${role}`, classifyHID(usage).role === role, classifyHID(usage).role);
-cas(0x2c, 'space');
-cas(0x28, 'enter');
-cas(0x58, 'enter');       // keypad enter
-cas(0x2a, 'delete');
-cas(0x4c, 'delete');      // forward delete
-cas(0xe0, 'modifier');    // left ctrl
-cas(0xe7, 'modifier');    // right gui
-cas(0x04, 'keys');        // a
-cas(0x1d, 'keys');        // z
-cas(0x29, 'keys');        // escape
+// --- macOS virtual keycodes (what the listen-only tap reports) ---------------
+const cas = (code, role) => check(`keycode ${code} -> ${role}`, classifyKeycode(code).role === role, classifyKeycode(code).role);
+cas(49, 'space');
+cas(36, 'enter');
+cas(76, 'enter');        // keypad enter
+cas(51, 'delete');
+cas(117, 'delete');      // forward delete
+cas(55, 'modifier');     // left command
+cas(62, 'modifier');     // right control
+cas(0, 'keys');          // a
+cas(6, 'keys');          // z
+cas(53, 'keys');         // escape
 
-check('HID left-half key pans left', classifyHID(0x14).pan < -0.15, classifyHID(0x14).pan);   // q
-check('HID right-half key pans right', classifyHID(0x13).pan > 0.15, classifyHID(0x13).pan);  // p
-check('HID centre key is centred', Math.abs(classifyHID(0x2c).pan) < 0.001);                  // space
-check('HID pan stays inside -0.65..0.65',
-  Object.values({}).length === 0 && [0x04, 0x13, 0x1d, 0x38].every((u) => Math.abs(classifyHID(u).pan) <= 0.65));
-check('HID unknown usage defaults to keys', classifyHID(0x7f).role === 'keys');
-
-// a letter row should be monotonic left to right
-const q = classifyHID(0x14).pan; // q
-const p = classifyHID(0x13).pan; // p
-check('HID column order q < p', q < p, `${q} / ${p}`);
+check('left-side key pans left', classifyKeycode(12).pan < -0.15, classifyKeycode(12).pan);   // q
+check('right-side key pans right', classifyKeycode(35).pan > 0.15, classifyKeycode(35).pan);  // p
+check('space is centred', Math.abs(classifyKeycode(49).pan) < 0.001);
+check('pan stays inside -0.65..0.65',
+  [0, 35, 50, 44].every((c) => Math.abs(classifyKeycode(c).pan) <= 0.65));
+check('unknown keycode defaults to keys', classifyKeycode(999).role === 'keys');
+check('column order q < p', classifyKeycode(12).pan < classifyKeycode(35).pan);
 
 // --- Windows keycodes -------------------------------------------------------
 const UiohookKey = { Space: 57, Enter: 3612, Backspace: 14, Delete: 3667, Shift: 42, A: 30, Z: 44, P: 25 };

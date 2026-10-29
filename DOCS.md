@@ -125,7 +125,7 @@ path can never stall.
 
 | Platform | Needed for | Notes |
 | --- | --- | --- |
-| macOS | **Input Monitoring only** | a native helper (IOHIDManager) *observes* HID reports; it never installs an event tap, so it cannot intercept or delay input and never asks for Accessibility |
+| macOS | **Input Monitoring only** | an in-process listen-only event tap: the OS forbids it from modifying or blocking events, so Klick cannot intercept or delay input, and it never asks for Accessibility |
 | Windows | nothing | a low-level keyboard hook needs no prompt |
 
 Klick does **not** ask for Accessibility, Screen Recording, microphone, camera,
@@ -148,8 +148,9 @@ capture, so the app can be evaluated without any permission at all.
 - preview mode start/stop, single-instance lock behaviour, tray icon generation
 - key mapping unit tests (`scripts/test-keys.js`): HID usages → roles, stereo
   ordering, Windows keycode table, and cue routing (recorded vs pack notes)
-- the native helper builds as a universal binary and fails safe: without Input
-  Monitoring it prints `access missing`, waits, and picks the permission up later
+- the capture addon builds as a universal binary and gates its tap on
+  `CGPreflightListenEventAccess()`: without permission it reports `permission` and
+  retries once a second, so granting it starts capture without a restart
 
 **Not verified**
 - global key capture on macOS (needs the user's Accessibility grant) and on Windows
