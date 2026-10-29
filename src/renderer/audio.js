@@ -1,0 +1,93 @@
+'use strict';
+// Audio engine: decodes the generated WAV packs once, then plays a take per key
+// with per-press pitch variation and stereo placement.
+
+const ctx = new AudioContext({ latencyHint: 'interactive' });
+const banks = new Map(); // pack -> { role: [AudioBuffer] }
+const loading = new Map(); // pack -> Promise
+const cues = {};       // 'done' | 'error' -> AudioBuffer
+
+function b64ToArrayBuffer(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function load(pack) {
+  if (banks.has(pack)) return banks.get(pack);
+  if (loading.has(pack)) return loading.get(pack);
+  const promise = (async () => {
+    const raw = await window.klick.samples(pack);
+    const bank = {};
+    for (const [role, takes] of Object.entries(raw || {})) {
+      bank[role] = [];
+      for (const b64 of takes) {
+        try {
+          bank[role].push(await ctx.decodeAudioData(b64ToArrayBuffer(b64)));
+        } catch (err) {
+          console.error('[klick] could not decode', pack, role, err.message);
+        }
+      }
+    }
+    banks.set(pack, bank);
+    console.log('[audio] pack ready', pack, Object.keys(bank).join(','));
+    return bank;
+  })();
+  loading.set(pack, promise);
+  return promise;
+}
+
+async function playCue(msg) {
+  const buffer = cues[msg.name];
+  if (!buffer) return;
+  const gain = ctx.createGain();
+  gain.gain.value = Math.max(0, Math.min(1, typeof msg.gain === 'number' ? msg.gain : 0.8));
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.connect(gain).connect(ctx.destination);
+  src.start();
+}
+
+async function play(msg) {
+  try {
+    if (ctx.state === 'suspended') await ctx.resume();
+    if (msg.kind === 'cue') return playCue(msg);
+    const bank = await load(msg.pack);
+    const takes = bank[msg.role] && bank[msg.role].length ? bank[msg.role] : bank.keys;
+    if (!takes || !takes.length) return;
+    const buffer = takes.length === 1 ? takes[0] : takes[Math.floor(Math.random() * takes.length)];
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = msg.rate || 1;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, msg.pan || 0));
+    const gain = ctx.createGain();
+    gain.gain.value = Math.max(0, Math.min(1, typeof msg.gain === 'number' ? msg.gain : 0.7));
+    src.connect(panner).connect(gain).connect(ctx.destination);
+    src.start();
+  } catch (err) {
+    console.error('[klick] play failed', err.message);
+  }
+}
+
+async function loadCues() {
+  try {
+    const raw = await window.klick.cueSamples();
+    for (const [name, b64] of Object.entries(raw || {})) {
+      if (!b64) continue;
+      cues[name] = await ctx.decodeAudioData(b64ToArrayBuffer(b64));
+    }
+    console.log('[audio] cues ready', Object.keys(cues).join(',') || 'none');
+  } catch (err) {
+    console.error('[audio] cue load failed', err.message);
+  }
+}
+
+loadCues();
+window.klick.onPlay(play);
+window.klick.onSettings((cfg) => {
+  if (cfg && cfg.pack) load(cfg.pack); // warm the cache for the next press
+});
+window.klick.getSettings().then((cfg) => cfg && cfg.pack && load(cfg.pack));
+document.addEventListener('DOMContentLoaded', () => {});

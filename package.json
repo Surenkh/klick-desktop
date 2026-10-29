@@ -1,0 +1,113 @@
+{
+  "name": "klick",
+  "productName": "Klick",
+  "version": "0.1.0",
+  "description": "Keyboard sounds with Kiki, your little keycap companion - macOS and Windows.",
+  "main": "src/main/index.js",
+  "author": "Suren",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "sounds": "python3 scripts/gen-sounds.py",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "test": "node scripts/test-keys.js && node scripts/test-agents.js",
+    "build:native": "clang -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -framework IOKit -framework CoreGraphics -framework CoreFoundation -o native/bin/klick-keys native/klick-keys.c"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "app.klick.Klick",
+    "productName": "Klick",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/buddy/**/*",
+      "assets/packs/**/*",
+      "assets/*.png",
+      "package.json",
+      "assets/cues/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src/main/hook.js",
+        "to": "hook.js"
+      },
+      {
+        "from": "native/bin/klick-keys",
+        "to": "klick-keys"
+      }
+    ],
+    "asarUnpack": [
+      "**/node_modules/uiohook-napi/**"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSHumanReadableCopyright": "\u00a9 2026 Klick",
+        "LSApplicationCategoryType": "public.app-category.utilities",
+        "NSHighResolutionCapable": true
+      },
+      "identity": null
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "title": "Klick ${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": null,
+    "electronDist": "node_modules/electron/dist",
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
+  }
+}

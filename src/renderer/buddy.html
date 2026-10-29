@@ -1,0 +1,286 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Kiki</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body {
+        margin: 0; height: 100%; background: transparent; overflow: hidden;
+        -webkit-user-select: none; cursor: default;
+      }
+      #stage {
+        position: absolute; inset: 0; display: grid; place-items: center;
+        -webkit-app-region: drag;
+      }
+
+      /* the character: two layers so state changes crossfade instead of snap */
+      #char {
+        position: relative; width: 138px; height: 138px;
+        transform-origin: 50% 78%;
+        transition: transform 130ms cubic-bezier(.22, .8, .3, 1);
+        will-change: transform;
+      }
+      .klick {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: contain; pointer-events: none; opacity: 0;
+        transition: opacity 220ms ease;
+        filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .40));
+      }
+      .klick.show { opacity: 1; }
+
+      #char.press { transform: translateY(3px) scale(.955); }
+      #char.pop    { animation: pop 380ms cubic-bezier(.22, .9, .3, 1.25); }
+      #char.enter  { animation: enter 420ms cubic-bezier(.22, .9, .3, 1.2); }
+      #char.idle-bob { animation: bob 4.8s ease-in-out infinite; }
+
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50%      { transform: translateY(-3px) rotate(-.4deg); }
+      }
+      @keyframes pop {
+        0%   { transform: scale(1); }
+        45%  { transform: scale(1.05) translateY(-2px); }
+        100% { transform: scale(1); }
+      }
+      @keyframes enter {
+        0%   { transform: scale(.92) translateY(6px); opacity: 0; }
+        100% { transform: scale(1) translateY(0); opacity: 1; }
+      }
+
+      /* drawn fallback if the art is missing */
+      .cap {
+        width: 104px; height: 104px; border-radius: 26px; display: none;
+        background:
+          radial-gradient(120% 90% at 30% 8%, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 42%),
+          linear-gradient(160deg, #6f63a8 0%, #4a4372 55%, #2b2740 100%);
+        box-shadow: 0 16px 28px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.16),
+                    inset 0 -7px 14px rgba(0,0,0,.5);
+        position: relative; place-items: center;
+      }
+      .cap::after {
+        content: ""; position: absolute; inset: 7px; border-radius: 20px;
+        background: #16161c;
+        box-shadow: inset 0 0 0 2px rgba(120, 240, 190, .5), inset 0 8px 22px rgba(0,0,0,.8);
+      }
+      .face { position: relative; width: 58px; height: 44px; z-index: 1; }
+      .eye {
+        position: absolute; top: 6px; width: 9px; height: 12px; border-radius: 50%;
+        background: #f7ecc8; box-shadow: 0 0 8px rgba(255, 226, 150, .9);
+      }
+      .eye.left { left: 8px; } .eye.right { right: 8px; }
+      .mouth {
+        position: absolute; left: 50%; bottom: 2px; width: 18px; height: 9px;
+        transform: translateX(-50%); border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px; border: 2.5px solid #f7ecc8; border-top: 0;
+      }
+
+      /* settings affordance */
+      #gear {
+        position: absolute; right: 4px; bottom: 4px; width: 24px; height: 24px;
+        border-radius: 50%; background: rgba(255,255,255,.10); color: #d7d2ea;
+        display: grid; place-items: center; font-size: 12px;
+        -webkit-app-region: no-drag; opacity: 0; transition: opacity 140ms ease;
+      }
+      #stage:hover #gear { opacity: 1; }
+      #gear:hover { background: rgba(255,255,255,.2); }
+
+      @media (prefers-reduced-motion: reduce) {
+        #char.idle-bob { animation: none; }
+        #char.pop, #char.enter { animation: none; }
+        #char, .klick { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="char" hidden>
+        <img class="klick" id="k0" alt="Kiki" />
+        <img class="klick" id="k1" alt="" />
+      </div>
+      <div class="cap" id="cap">
+        <div class="face">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+        </div>
+      </div>
+      <div id="gear" title="Klick settings">⚙</div>
+    </div>
+    <script>
+      const api = window.klick || {
+        onPress() {}, onMood() {}, hat: async () => null, openSettings() {}, quit() {}
+      };
+      const BASE = '../../assets/buddy/';
+      const char = document.getElementById('char');
+      const layers = [document.getElementById('k0'), document.getElementById('k1')];
+      let front = 0;
+      let shownSrc = '';
+      const cap = document.getElementById('cap');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const PNG = ['idle', 'press', 'happy', 'party', 'sweat', 'error', 'sleep', 'blink'];
+      const art = {};   // state -> url
+      const anim = {};  // 'idle' | 'happy' -> url
+      let ready = false;
+      let mode = 'idle';
+      let timer = null;
+      let blinkTimer = null;
+      let sleepTimer = null;
+      let pressTimer = null;
+      let lastActivity = Date.now();
+
+      // ---------- load ----------
+      let pending = PNG.length + 2;
+      const settle = () => { if (--pending === 0) boot(); };
+
+      for (const state of PNG) {
+        const img = new Image();
+        img.onload = () => { art[state] = img.src; settle(); };
+        img.onerror = settle;
+        img.src = BASE + state + '.png';
+      }
+      for (const name of ['idle', 'happy']) {
+        const img = new Image();
+        img.onload = () => { anim[name] = img.src; settle(); };
+        img.onerror = settle;
+        img.src = BASE + 'anim/' + name + '.webp';
+      }
+
+      function boot() {
+        if (!art.idle) {
+          // no art installed: keep the drawn keycap but still react
+          cap.style.display = 'grid';
+          char.hidden = true;
+          return;
+        }
+        ready = true;
+        cap.style.display = 'none';
+        char.hidden = false;
+        char.classList.add('enter');
+        setTimeout(() => char.classList.remove('enter'), 440);
+        show('idle');
+        scheduleBlink();
+        armSleep();
+        const pinned = new URLSearchParams(location.hash.slice(1)).get('state');
+        if (pinned && art[pinned]) { mode = pinned; show(pinned); }
+      }
+
+      // ---------- rendering ----------
+      function show(state) {
+        if (!ready) return;
+        const useAnim = (state === 'idle' && anim.idle) || (state === 'happy' && anim.happy);
+        const src = useAnim ? (state === 'happy' ? anim.happy : anim.idle) : (art[state] || art.idle);
+        if (!src) return;
+
+        if (src !== shownSrc) {
+          const back = layers[1 - front];
+          const current = layers[front];
+          let swapped = false;
+          const swap = () => {
+            // onload, the cached check and the safety net can all fire; only the
+            // first one may move the front, or both layers end up hidden
+            if (swapped || !back.naturalWidth) return;
+            swapped = true;
+            back.classList.add('show');
+            current.classList.remove('show');
+            front = 1 - front;
+            shownSrc = src;
+            console.log('[klick] show', state, src.split('/').pop());
+          };
+          back.onload = swap;
+          back.src = src;
+          if (back.complete && back.naturalWidth) swap();
+          setTimeout(swap, 250);
+        }
+
+        // the animated loop floats by itself; the static idle needs a hand
+        const bob = !useAnim && state === 'idle' && !reduceMotion;
+        char.classList.toggle('idle-bob', !!bob);
+      }
+
+      function toIdle(pop) {
+        mode = 'idle';
+        show('idle');
+        if (pop && !reduceMotion) {
+          char.classList.add('pop');
+          setTimeout(() => char.classList.remove('pop'), 400);
+        }
+        scheduleBlink();
+        armSleep();
+      }
+
+      function setMood(next, ms) {
+        mode = next;
+        show(next);
+        if (timer) clearTimeout(timer);
+        if (ms) timer = setTimeout(() => toIdle(true), ms);
+      }
+
+      // ---------- interaction ----------
+      api.onPress(() => {
+        lastActivity = Date.now();
+        if (!ready) return;
+        if (mode === 'sleep') return toIdle(true);
+        const restore = mode === 'press' ? 'idle' : mode;
+        mode = 'press';
+        show('press');
+        char.classList.add('press');
+        if (pressTimer) clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          char.classList.remove('press');
+          if (mode === 'press') { mode = restore; show(restore); }
+        }, 110);
+        armSleep();
+        scheduleBlink();
+      });
+
+      api.onMood((raw) => {
+        lastActivity = Date.now();
+        if (!ready) return;
+        const map = {
+          party: ['party', 1800], success: ['party', 1800],
+          happy: ['happy', 1400],
+          sweat: ['sweat', 2600], attention: ['sweat', 2600], 'needs-you': ['sweat', 2600],
+          error: ['error', 2000], loud: ['error', 2000]
+        };
+        const hit = map[raw];
+        if (!hit) return;
+        setMood(hit[0], hit[1]);
+      });
+
+      // ---------- idle behaviours ----------
+      function scheduleBlink() {
+        if (blinkTimer) clearTimeout(blinkTimer);
+        if (reduceMotion || anim.idle) return; // the animated loop blinks by itself
+        blinkTimer = setTimeout(() => {
+          if (mode === 'idle' && art.blink) {
+            show('blink');
+            setTimeout(() => { if (mode === 'idle') show('idle'); }, 120);
+          }
+          scheduleBlink();
+        }, 3800 + Math.random() * 3600);
+      }
+
+      function armSleep() {
+        if (sleepTimer) clearTimeout(sleepTimer);
+        sleepTimer = setTimeout(() => {
+          if (mode === 'idle' && Date.now() - lastActivity > 88000) {
+            mode = 'sleep';
+            show('sleep');
+          }
+        }, 90000);
+      }
+
+      // ---------- shell ----------
+      document.getElementById('gear').addEventListener('click', (e) => {
+        e.stopPropagation();
+        api.openSettings();
+      });
+      window.addEventListener('beforeunload', () => {
+        clearTimeout(timer); clearTimeout(blinkTimer);
+        clearTimeout(sleepTimer); clearTimeout(pressTimer);
+      });
+    </script>
+  </body>
+</html>

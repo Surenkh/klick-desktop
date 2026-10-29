@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Klick</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <img class="mark" src="../../assets/buddy/idle.png" alt="" />
+          <div>
+            <div class="name">Klick</div>
+            <div class="tag">keyboard sounds</div>
+          </div>
+        </div>
+        <nav id="nav">
+          <button data-view="sound" class="active">Sound</button>
+          <button data-view="keys">Keys</button>
+          <button data-view="buddy">Buddy</button>
+          <button data-view="agents">Agents</button>
+          <button data-view="today">Today</button>
+          <button data-view="about">About</button>
+        </nav>
+        <div class="master">
+          <label class="switch">
+            <input type="checkbox" id="enabled" />
+            <span></span>
+          </label>
+          <span id="enabledLabel">Sounds on</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div id="permBanner" class="banner" hidden>
+          <div>
+            <strong>Klick needs Input Monitoring</strong>
+            <span>macOS asks once so Klick can hear that a key went down. It never sees what
+              you type, and it never intercepts input. Turn it on and Klick continues within a
+              few seconds - no restart needed.</span>
+          </div>
+          <button class="action" id="openPrivacy">Open Input Monitoring</button>
+        </div>
+        <section id="view-sound" class="view active">
+          <h1>Pick how your keyboard sounds</h1>
+          <p class="lede">Real keyboard recordings, cut key by key. Click a pack to preview.</p>
+          <div class="card" style="margin-bottom:18px">
+            <label class="toggle">
+              <input type="checkbox" id="quickSounds" />
+              <div>
+                <strong>Keyboard sounds</strong>
+                <span>Every key, in every app. The master switch.</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="quickKiki" />
+              <div>
+                <strong>Kiki on the desktop</strong>
+                <span>The little keycap that presses along with you.</span>
+              </div>
+            </label>
+          </div>
+          <div class="packs" id="packs"></div>
+          <div class="row">
+            <label for="volume">Volume</label>
+            <input type="range" id="volume" min="0" max="100" step="1" />
+            <output id="volumeOut">70%</output>
+          </div>
+        </section>
+
+        <section id="view-keys" class="view">
+          <h1>How it feels</h1>
+          <div class="card">
+            <label class="toggle">
+              <input type="checkbox" id="releaseSounds" />
+              <div>
+                <strong>Release sounds</strong>
+                <span>A softer sound when a key comes back up, like a real switch.</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="mouseClicks" />
+              <div>
+                <strong>Mouse clicks</strong>
+                <span>A click for the trackpad and mouse buttons.</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="launchAtLogin" />
+              <div>
+                <strong>Start at login</strong>
+                <span>Open Klick when you log in to this computer.</span>
+              </div>
+            </label>
+          </div>
+          <p class="hint">Keys carry their keyboard position into the stereo field: left-side keys
+            lean left, right-side keys lean right. Space, Return and Delete get their own bigger
+            samples, and every press gets a slightly different take and pitch.</p>
+        </section>
+
+        <section id="view-buddy" class="view">
+          <h1>Kiki</h1>
+          <div class="card">
+            <label class="toggle">
+              <input type="checkbox" id="buddy" />
+              <div>
+                <strong>Show Kiki on the desktop</strong>
+                <span>It sits in the corner, presses along with you and reacts to agents.</span>
+              </div>
+            </label>
+          </div>
+          <div class="row buttons">
+            <button class="action" id="tapKiki">Tap Kiki</button>
+            <button class="ghost" id="cueDone">Done</button>
+            <button class="ghost" id="cueNeeds">Needs you</button>
+            <button class="ghost" id="cueError">Error</button>
+          </div>
+          <p class="hint">Tap Kiki plays one key and makes it press along. The three buttons play the
+            agent cues (done, needs you, error) with the sound and the face.</p>
+        </section>
+
+        <section id="view-agents" class="view">
+          <h1>Your coding agents</h1>
+          <p class="lede">Hear a cue when Claude Code, Cursor or the Codex CLI is done, needs you, or
+            fails. Klick adds one hook to each config file and backs it up first.</p>
+          <div id="agents" class="agents"></div>
+          <p class="hint" id="agentNote"></p>
+        </section>
+
+        <section id="view-today" class="view">
+          <h1>Today</h1>
+          <div class="stats">
+            <div class="stat"><span id="stTaps">0</span><label>taps</label></div>
+            <div class="stat"><span id="stXp">0</span><label>XP</label></div>
+            <div class="stat"><span id="stLevel">1</span><label>level</label></div>
+            <div class="stat"><span id="stHat">—</span><label>hat</label></div>
+          </div>
+          <p class="hint">1 XP per key, 10 per slap. No account, no analytics: this stays in a JSON
+            file on your machine.</p>
+        </section>
+
+        <section id="view-about" class="view">
+          <h1>About Klick</h1>
+          <p class="lede">A cross-platform keyboard-sound app for macOS and Windows: every key, a
+            little joy, with a keycap buddy and agent cues.</p>
+          <div class="card">
+            <div class="kv"><span>Version</span><b id="version">0.1.0</b></div>
+            <div class="kv"><span>Sounds</span><b>generated locally, MIT</b></div>
+            <div class="kv"><span>Permissions</span><b id="perm">Input Monitoring only (macOS)</b></div>
+            <div class="kv"><span>Network</span><b>none - Klick makes no network requests</b></div>
+            <div class="kv"><span>Log</span><b><button class="ghost" id="revealLog">Reveal log</button></b></div>
+          </div>
+          <div class="row buttons">
+            <button class="ghost" id="quit">Quit Klick</button>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="settings.js"></script>
+  </body>
+</html>

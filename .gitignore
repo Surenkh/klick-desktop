@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.userdata/
+.dl/
+.electron-cache/
+*.log
+assets/buddy/_preview.png
+assets/icon.iconset/
+.keys/
+.electron-builder-cache/
+incoming/

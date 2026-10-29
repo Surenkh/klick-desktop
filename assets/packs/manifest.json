@@ -1,0 +1,110 @@
+{
+  "laptop": {
+    "space": [
+      "space-1.wav"
+    ],
+    "enter": [
+      "enter-1.wav"
+    ],
+    "delete": [
+      "delete-1.wav"
+    ],
+    "modifier": [
+      "modifier-1.wav"
+    ],
+    "release": [
+      "release-1.wav"
+    ],
+    "click": [
+      "click-1.wav"
+    ],
+    "keys": [
+      "keys-1.wav",
+      "keys-2.wav",
+      "keys-3.wav",
+      "keys-4.wav",
+      "keys-5.wav"
+    ]
+  },
+  "hard": {
+    "space": [
+      "space-1.wav"
+    ],
+    "enter": [
+      "enter-1.wav"
+    ],
+    "delete": [
+      "delete-1.wav"
+    ],
+    "modifier": [
+      "modifier-1.wav"
+    ],
+    "release": [
+      "release-1.wav"
+    ],
+    "click": [
+      "click-1.wav"
+    ],
+    "keys": [
+      "keys-1.wav",
+      "keys-2.wav",
+      "keys-3.wav",
+      "keys-4.wav",
+      "keys-5.wav"
+    ]
+  },
+  "fast": {
+    "space": [
+      "space-1.wav"
+    ],
+    "enter": [
+      "enter-1.wav"
+    ],
+    "delete": [
+      "delete-1.wav"
+    ],
+    "modifier": [
+      "modifier-1.wav"
+    ],
+    "release": [
+      "release-1.wav"
+    ],
+    "click": [
+      "click-1.wav"
+    ],
+    "keys": [
+      "keys-1.wav",
+      "keys-2.wav",
+      "keys-3.wav",
+      "keys-4.wav",
+      "keys-5.wav"
+    ]
+  },
+  "soft": {
+    "space": [
+      "space-1.wav"
+    ],
+    "enter": [
+      "enter-1.wav"
+    ],
+    "delete": [
+      "delete-1.wav"
+    ],
+    "modifier": [
+      "modifier-1.wav"
+    ],
+    "release": [
+      "release-1.wav"
+    ],
+    "click": [
+      "click-1.wav"
+    ],
+    "keys": [
+      "keys-1.wav",
+      "keys-2.wav",
+      "keys-3.wav",
+      "keys-4.wav",
+      "keys-5.wav"
+    ]
+  }
+}
