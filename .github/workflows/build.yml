@@ -24,9 +24,10 @@ jobs:
       - name: Verify architectures and size
         run: |
           set -eu
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' native/app/Info.plist)"
           for arch in arm64 x64; do
             mnt="$(mktemp -d)"
-            hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "dist/Klick-0.4.0-$arch.dmg" >/dev/null
+            hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "dist/Klick-$VERSION-$arch.dmg" >/dev/null
             file "$mnt/Klick.app/Contents/MacOS/Klick"
             hdiutil detach "$mnt" >/dev/null
             rmdir "$mnt"
