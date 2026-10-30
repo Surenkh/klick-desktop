@@ -15,7 +15,7 @@ Privacy & Security → Open Anyway**, then flip **Input Monitoring** on.
 
 ### Numbers
 
-| | 0.3.1 (Electron) | 0.4.0 (native) |
+| Metric | 0.3.1 (Electron) | 0.4.0 (native) |
 | --- | --- | --- |
 | App | 265 MB | **7 MB** |
 | DMG | 127 MB | **7 MB** |

@@ -41,7 +41,7 @@ Recording, no microphone, no network, no account, no telemetry.
 
 ## Why it is this small and this fast
 
-| Native build (0.4.x) |
+| Metric | Klick 0.4.3 (native) |
 | --- | --- |
 | App size | **7 MB** |
 | DMG | **7 MB** |
