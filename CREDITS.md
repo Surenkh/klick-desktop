@@ -37,7 +37,7 @@ MIT grant and carries the restriction above.
 ## Generated fallback
 
 `scripts/gen-sounds.py` still produces purely synthesised packs (modal
-synthesis, no samples at all). Use `npm run sounds` if you ever need audio with
+synthesis, no samples at all). Run `python3 scripts/gen-sounds.py` if you ever need audio with
 no licensing questions attached. The current `assets/packs/` do not contain any
 generated packs.
 

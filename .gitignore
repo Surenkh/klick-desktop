@@ -17,3 +17,5 @@ tools/
 **/.DS_Store
 build/
 .signing/
+
+.cache/

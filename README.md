@@ -56,7 +56,7 @@ delay it. Details in [ARCHITECTURE.md](ARCHITECTURE.md).
 Requires Xcode Command Line Tools (clang), macOS 14+.
 
 ```sh
-sh scripts/test-native.sh      # 23 checks: keymap, packs, mixer, cues
+sh scripts/test-native.sh      # 43 checks: keymap, packs, mixer, cues
 sh scripts/build-native.sh     # build + sign for this Mac
 sh scripts/build-native.sh --install   # build, install to /Applications, launch
 sh scripts/package-native.sh   # both DMGs into dist/
