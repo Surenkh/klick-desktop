@@ -848,6 +848,15 @@ static void mirror_settings(NSDictionary *settings) {
     }
     if ([method isEqualToString:@"cueSamples"]) return @{ @"done": [NSNull null], @"error": [NSNull null] };
     if ([method isEqualToString:@"onboarded"]) { self.settings[@"onboarded"] = @YES; [self saveSettings]; return @YES; }
+    if ([method isEqualToString:@"resetTaps"]) {
+        atomic_store(&app_counters.taps, 0);
+        atomic_store(&app_last_pulse_taps, 0);
+        [self saveSettings];
+        NSDictionary *stats = [self statsPayload];
+        [self pushStats:stats];
+        [self log:@"taps reset to 0"];
+        return stats;
+    }
     if ([method isEqualToString:@"demoTap"]) {
         [self log:@"demo tap"];
         audio_trigger(KLICK_ROLE_KEYS, 0, (float)num(self.settings[@"volume"], 0.7), 1.0f, mach_absolute_time());

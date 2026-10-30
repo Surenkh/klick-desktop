@@ -196,6 +196,62 @@ async function boot() {
   };
   bindBuddyPrefs('showTapCounter', 'celebrateEvery');
   bindBuddyPrefs('soundTapCounter', 'soundCelebrateEvery');
+  // ---- reset taps: two-step confirmation, auto-cancels after 6s -------------
+  const resetBtn = $('resetTaps');
+  const resetCancel = $('resetCancel');
+  const resetHint = $('resetHint');
+  let resetStep = 0;
+  let resetTimer = null;
+
+  const paintReset = () => {
+    if (resetStep === 0) {
+      resetBtn.textContent = 'Reset taps to 0';
+      resetBtn.className = 'action danger';
+      resetCancel.hidden = true;
+      resetHint.hidden = true;
+    } else if (resetStep === 1) {
+      resetBtn.textContent = 'Are you sure? Click to confirm';
+      resetBtn.className = 'action danger confirming';
+      resetCancel.hidden = false;
+      resetHint.hidden = false;
+      resetHint.textContent = 'Your taps and Kiki\'s counter will go back to 0. XP and level stay.';
+    } else {
+      resetBtn.textContent = 'Final check: reset to 0?';
+      resetBtn.className = 'action danger final';
+      resetCancel.hidden = false;
+      resetHint.hidden = false;
+      resetHint.textContent = 'Click once more to reset. Auto-cancels in 6 seconds.';
+    }
+  };
+
+  const armReset = () => {
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => { resetStep = 0; paintReset(); }, 6000);
+  };
+
+  resetBtn.addEventListener('click', async () => {
+    if (resetStep < 2) {
+      resetStep += 1;
+      paintReset();
+      armReset();
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetStep = 0;
+    const result = await window.klick.resetTaps();
+    paintReset();
+    if (result && typeof result.taps === 'number') {
+      $('stTaps').textContent = result.taps;
+      if (window.klick.debug) window.klick.debug(`reset taps -> ${result.taps}`);
+    }
+  });
+
+  resetCancel.addEventListener('click', () => {
+    clearTimeout(resetTimer);
+    resetStep = 0;
+    paintReset();
+  });
+
   $('tapKiki').addEventListener('click', () => window.klick.demoTap());
   $('cueDone').addEventListener('click', () => window.klick.demoCue('done'));
   $('cueNeeds').addEventListener('click', () => window.klick.demoCue('needs-you'));

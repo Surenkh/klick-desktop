@@ -6,8 +6,12 @@
   --line: #2b2f3a;
   --text: #eef0f5;
   --muted: #9aa1b0;
-  --accent: #ffb84d;
-  --accent-soft: rgba(255, 184, 77, 0.14);
+  --accent: #8DEAC1;                    /* mint: the app accent */
+  --accent-soft: rgba(141, 234, 193, 0.14);
+  --accent-ink: #0c1a14;                /* text on solid mint */
+  --warn: #ffb84d;                       /* amber: reserved for the system warning */
+  --warn-soft: rgba(255, 184, 77, 0.12);
+  --warn-line: rgba(255, 184, 77, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -124,7 +128,7 @@ output { color: var(--muted); width: 44px; text-align: right; }
 .pill.on { color: #8be0a4; border-color: rgba(139,224,164,.35); background: rgba(139,224,164,.1); }
 button.action {
   all: unset; cursor: pointer; padding: 7px 13px; border-radius: 8px;
-  background: var(--accent); color: #241a08; font-weight: 600; font-size: 12px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 12px;
 }
 button.action:hover { filter: brightness(1.06); }
 button.action.ghost { background: #2a2e3a; color: var(--text); }
@@ -145,7 +149,7 @@ button.ghost:hover { color: var(--text); background: #1f222b; }
 
 .banner {
   display: flex; gap: 16px; align-items: center; justify-content: space-between;
-  background: rgba(255, 184, 77, 0.12); border: 1px solid rgba(255, 184, 77, 0.4);
+  background: var(--warn-soft); border: 1px solid var(--warn-line);
   border-radius: 12px; padding: 14px 16px; margin: 0 0 18px; max-width: 720px;
 }
 .banner > div { min-width: 0; flex: 1 1 auto; }
@@ -159,7 +163,7 @@ button.action.banner-cta {
 }
 button.action.banner-cta br { display: block; }
 .banner[hidden] { display: none; }
-.banner strong { display: block; color: var(--accent); margin-bottom: 3px; }
+.banner strong { display: block; color: var(--warn); margin-bottom: 3px; }
 .banner span { color: #cfd3de; font-size: 12px; }
 
 /* first-run screen */
@@ -179,7 +183,7 @@ button.action.banner-cta br { display: block; }
 button.wide { display: block; width: 100%; padding: 11px 14px; text-align: center; }
 .onboard-step {
   margin: 16px 0 8px; padding: 14px; border-radius: 12px; text-align: left;
-  background: rgba(255,184,77,.08); border: 1px solid rgba(255,184,77,.3);
+  background: rgba(141,234,193,.08); border: 1px solid rgba(141,234,193,.3);
 }
 .onboard-step.ok { background: rgba(139,224,164,.10); border-color: rgba(139,224,164,.35); }
 .onboard-step strong { display: block; margin-bottom: 4px; }
@@ -194,7 +198,7 @@ button.wide { display: block; width: 100%; padding: 11px 14px; text-align: cente
 .ob-primary {
   all: unset; display: block; width: 100%; padding: 12px 16px; border-radius: 10px;
   text-align: center; cursor: pointer; font-weight: 650; font-size: 13px;
-  background: var(--accent); color: #241a08;
+  background: var(--accent); color: var(--accent-ink);
 }
 .ob-primary:hover { filter: brightness(1.06); }
 .ob-primary.small { padding: 9px 14px; font-size: 12px; width: auto; display: inline-block; }
@@ -221,4 +225,17 @@ button.wide { display: block; width: 100%; padding: 11px 14px; text-align: cente
   border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 26px 7px 10px; font-size: 12.5px; cursor: pointer;
 }
-.field select:focus { outline: 2px solid rgba(255, 184, 77, .45); outline-offset: 1px; }
+.field select:focus { outline: 2px solid rgba(141, 234, 193, .5); outline-offset: 1px; }
+
+/* the warning banner keeps the amber CTA so it reads as a system alert */
+.banner .action,
+.banner button.action.banner-cta {
+  background: var(--warn); color: #241a08;
+}
+.banner .action:hover,
+.banner button.action.banner-cta:hover { filter: brightness(1.05); }
+
+/* danger action for destructive settings */
+button.action.danger { background: #3a2329; color: #ff9d9d; border: 1px solid rgba(255,120,120,.3); }
+button.action.danger.confirming { background: #4a2026; color: #ffb3b3; }
+button.action.danger.final { background: #7c1f27; color: #fff; }
