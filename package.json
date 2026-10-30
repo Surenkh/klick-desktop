@@ -106,7 +106,6 @@
       ]
     },
     "publish": null,
-    "electronDist": "node_modules/electron/dist",
     "npmRebuild": false,
     "buildDependenciesFromSource": false,
     "artifactName": "${productName}-${version}-${arch}.${ext}"

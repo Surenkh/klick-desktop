@@ -4,6 +4,8 @@
 
 Keyboard sounds for **macOS and Windows**, with **Kiki**, a little keycap companion.
 
+**Latest release: 0.3.0.**
+
 **Download:** grab `Klick-<version>-arm64.zip` from Releases, then follow
 [`INSTALL.md`](INSTALL.md) (one "Open Anyway" click on first launch, because the
 build is unsigned).

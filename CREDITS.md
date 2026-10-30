@@ -1,5 +1,7 @@
 # Credits and licences
 
+Assets as shipped in **Klick 0.3.0**.
+
 ## Sound sources
 
 The four shipped packs were cut from recording sequences supplied by the project owner:

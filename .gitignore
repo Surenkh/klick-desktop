@@ -12,3 +12,6 @@ incoming/
 .electron-x64/
 .gh/
 tools/
+
+.DS_Store
+**/.DS_Store

@@ -1,5 +1,8 @@
 # Architecture
 
+**Current release: Klick 0.3.0** — macOS (Apple silicon + Intel).
+The capture layer is in-process, listen-only, Input Monitoring only.
+
 Klick is one Electron app with a small native helper. Everything is local: no
 server, no telemetry, no network code at all in this build.
 

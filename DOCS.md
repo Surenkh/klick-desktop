@@ -1,5 +1,7 @@
 # Klick — functionality and internals
 
+**Current release: 0.3.0** (macOS 14+, arm64 and x86_64).
+
 **App:** Klick · **Character:** Kiki — your little keycap companion.
 Keyboard sounds for macOS and Windows, plus a desktop character that reacts to what you do.
 
