@@ -14,7 +14,7 @@ Grab the DMG for your Mac from [Releases](https://github.com/Surenkh/klick-deskt
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M4) | `Klick-0.4.3-arm64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.4.3-arm64.dmg` |
 | Intel | `Klick-0.4.3-x64.dmg` |
 
 Open the DMG, drag **Klick** to Applications, then launch it. macOS will refuse an
@@ -41,12 +41,12 @@ Recording, no microphone, no network, no account, no telemetry.
 
 ## Why it is this small and this fast
 
-| | Electron build (0.3.x) | Native build (0.4.x) |
-| --- | --- | --- |
-| App size | 265 MB | **7 MB** |
-| DMG | 127 MB | **7 MB** |
-| Key-to-ear latency | ~45 ms device buffer | **~2–4 ms** |
-| Runtime | Chromium + Node | AppKit + CoreAudio |
+| Native build (0.4.x) |
+| --- | --- |
+| App size | **7 MB** |
+| DMG | **7 MB** |
+| Key-to-ear latency | **~2–4 ms** |
+| Runtime | AppKit + CoreAudio |
 
 The key path never touches JavaScript: the `CGEventTap` thread pushes into a
 lock-free ring buffer that the CoreAudio render callback drains, with a 64-frame
