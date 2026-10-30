@@ -347,6 +347,8 @@ static void mirror_settings(NSDictionary *settings) {
     mirror_settings(self.settings);
     atomic_store(&app_counters.taps, [self.settings[@"taps"] unsignedIntValue]);
     atomic_store(&app_counters.xp, [self.settings[@"xp"] unsignedIntValue]);
+    // start the milestone window at the current count: no celebration on launch
+    atomic_store(&app_last_pulse_taps, atomic_load(&app_counters.taps));
 }
 
 - (void)saveSettings {
@@ -596,7 +598,7 @@ static void mirror_settings(NSDictionary *settings) {
     if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
 
     NSRect visible = [NSScreen mainScreen].visibleFrame;
-    CGFloat width = 160, height = 176;
+    CGFloat width = 264, height = 168;
     CGFloat x = num(self.settings[@"buddyX"], 0);
     CGFloat y = num(self.settings[@"buddyY"], 0);
     if (x <= 0 && y <= 0) {
@@ -627,6 +629,7 @@ static void mirror_settings(NSDictionary *settings) {
     web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     @try { [web setValue:@NO forKey:@"drawsBackground"]; } @catch (NSException *e) {}
 
+    web.navigationDelegate = self;
     panel.contentView = web;
     NSString *root = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"web"];
     NSURL *url = [NSURL fileURLWithPath:[root stringByAppendingPathComponent:@"buddy.html"]];
@@ -711,6 +714,24 @@ static void mirror_settings(NSDictionary *settings) {
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    if (webView == self.buddyWeb) {
+        [self log:@"buddy page loaded"];
+        NSData *settings = [NSJSONSerialization dataWithJSONObject:self.settings
+                                                           options:NSJSONWritingFragmentsAllowed error:nil];
+        NSData *stats = [NSJSONSerialization dataWithJSONObject:[self statsPayload]
+                                                        options:NSJSONWritingFragmentsAllowed error:nil];
+        NSString *s1 = [[NSString alloc] initWithData:settings encoding:NSUTF8StringEncoding];
+        NSString *s2 = [[NSString alloc] initWithData:stats encoding:NSUTF8StringEncoding];
+        NSString *js = [NSString stringWithFormat:
+            @"window.__klickEvent && (window.__klickEvent('settings', %@), window.__klickEvent('stats', %@))",
+            s1, s2];
+        [webView evaluateJavaScript:js completionHandler:nil];
+        [webView evaluateJavaScript:@"[typeof window.__klickEvent, typeof window.klick.debug, typeof window.klick.onStats, document.getElementById('tapPill') ? 'pill-ok' : 'pill-missing'].join('|')"
+                   completionHandler:^(id result, NSError *error) {
+            [self log:@"buddy probe: %@ %@", result ?: @"nil", error ? error.localizedDescription : @""];
+        }];
+        return;
+    }
     if (webView != self.webView) return;
     [self log:@"settings page loaded"];
     [webView evaluateJavaScript:@"window.__klickEvent ? 'bridge-ok' : 'bridge-missing'"
@@ -947,7 +968,16 @@ static void mirror_settings(NSDictionary *settings) {
     return @{ @"ok": @(ok) };
 }
 
-- (void)pushSettingsToWeb { [self pushEvent:@"settings" payload:self.settings]; }
+- (void)pushSettingsToWeb {
+    [self pushEvent:@"settings" payload:self.settings];
+    if (self.buddyWeb) {
+        NSData *json = [NSJSONSerialization dataWithJSONObject:self.settings
+                                                       options:NSJSONWritingFragmentsAllowed error:nil];
+        NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+        NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('settings', %@)", text];
+        [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+    }
+}
 - (void)pushStatusToWeb {
     if (!self.webView) return;
     BOOL healthy = klick_capture_is_running();
@@ -1001,8 +1031,18 @@ int main(int argc, const char *argv[]) {
                                   withIntermediateDirectories:YES attributes:nil error:nil];
         int lockFD = open(lockPath.UTF8String, O_CREAT | O_RDWR, 0644);
         if (lockFD < 0 || flock(lockFD, LOCK_EX | LOCK_NB) != 0) {
-            NSLog(@"another Klick is already running — exiting");
-            return 0;
+            // A stale lock file must not block launch: confirm a real second
+            // instance before giving up.
+            NSUInteger others = 0;
+            for (NSRunningApplication *app in
+                 [NSRunningApplication runningApplicationsWithBundleIdentifier:@"app.klick.Klick"]) {
+                if (app.processIdentifier != getpid()) others++;
+            }
+            if (others > 0) {
+                NSLog(@"another Klick is already running — exiting");
+                return 0;
+            }
+            NSLog(@"stale lock file — continuing");
         }
         NSApplication *app = [NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyAccessory];
