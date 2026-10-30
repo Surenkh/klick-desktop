@@ -2,7 +2,7 @@
 // Audio engine: decodes the generated WAV packs once, then plays a take per key
 // with per-press pitch variation and stereo placement.
 
-const ctx = new AudioContext({ latencyHint: 'interactive' });
+const ctx = new AudioContext({ latencyHint: 'interactive', sampleRate: 48000 });
 const banks = new Map(); // pack -> { role: [AudioBuffer] }
 const loading = new Map(); // pack -> Promise
 const cues = {};       // 'done' | 'error' -> AudioBuffer
@@ -56,6 +56,7 @@ async function playCue(msg) {
 }
 
 async function play(msg) {
+  const t0 = performance.now();
   try {
     if (ctx.state === 'suspended') await ctx.resume();
     if (msg.kind === 'cue') return playCue(msg);
@@ -72,6 +73,7 @@ async function play(msg) {
     gain.gain.value = Math.max(0, Math.min(1, typeof msg.gain === 'number' ? msg.gain : 0.7));
     src.connect(panner).connect(gain).connect(ctx.destination);
     src.start();
+    reportLatency(performance.now() - t0);
   } catch (err) {
     console.error('[klick] play failed', err.message);
   }
@@ -92,6 +94,43 @@ async function loadCues() {
 
 loadCues();
 window.klick.onPlay(play);
+
+// Keep the graph alive with silence instead of a system wake lock: audio keeps
+// running, but the Mac can still sleep.
+try {
+  const silence = ctx.createConstantSource();
+  silence.offset.value = 0;
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
+  silence.connect(mute).connect(ctx.destination);
+  silence.start();
+} catch (err) {
+  console.error('[audio] keep-alive failed', err.message);
+}
+
+// decode every pack up front so the first press of any pack is already warm
+(async () => {
+  try {
+    const packs = await window.klick.packs();
+    for (const name of packs) await load(name);
+    console.log('[audio] preloaded packs', packs.join(','));
+  } catch (err) {
+    console.error('[audio] preload failed', err.message);
+  }
+})();
+
+let reports = 0;
+function reportLatency(handlingMs) {
+  if (reports++ % 20 !== 0) return;   // sample, not spam
+  try {
+    window.klick.reportLatency({
+      baseMs: (ctx.baseLatency || 0) * 1000,
+      outputMs: (ctx.outputLatency || 0) * 1000,
+      handlingMs,
+      state: ctx.state
+    });
+  } catch {}
+}
 
 // Chromium can suspend a hidden window's audio graph; keep it awake and log it
 setInterval(() => {

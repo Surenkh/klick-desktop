@@ -6,6 +6,28 @@
     <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
+    <div id="onboarding" hidden>
+      <div class="onboard-card">
+        <div class="onboard-art">
+          <img src="../../assets/buddy/anim/idle.webp" alt="Kiki" />
+        </div>
+        <h2>Keyboard sounds, everywhere</h2>
+        <p>Klick plays a real keyboard sound under every key you press, in every app.
+          Kiki, the keycap in the corner, presses along with you.</p>
+
+        <button class="action wide" id="onboardTest">Hear a key</button>
+
+        <div class="onboard-step" id="onboardPerm">
+          <strong id="onboardPermTitle">One permission: Input Monitoring</strong>
+          <span id="onboardPermText">macOS asks once so Klick can hear that a key went down.
+            It never sees what you type, and it can never block a keystroke.</span>
+          <button class="ghost" id="onboardOpenPerm">Open Input Monitoring</button>
+        </div>
+
+        <p class="fine">No network. No account. Nothing leaves this Mac.</p>
+        <button class="action wide" id="onboardDone">Start typing</button>
+      </div>
+    </div>
     <div class="app">
       <aside class="sidebar">
         <div class="brand">
@@ -149,6 +171,7 @@
             <div class="kv"><span>Sounds</span><b>generated locally, MIT</b></div>
             <div class="kv"><span>Permissions</span><b id="perm">Input Monitoring only (macOS)</b></div>
             <div class="kv"><span>Network</span><b>none - Klick makes no network requests</b></div>
+            <div class="kv"><span>Audio latency</span><b id="latency">measuring…</b></div>
             <div class="kv"><span>Log</span><b><button class="ghost" id="revealLog">Reveal log</button></b></div>
           </div>
           <div class="row buttons">

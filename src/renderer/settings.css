@@ -151,3 +151,27 @@ button.ghost:hover { color: var(--text); background: #1f222b; }
 .banner[hidden] { display: none; }
 .banner strong { display: block; color: var(--accent); margin-bottom: 3px; }
 .banner span { color: #cfd3de; font-size: 12px; }
+
+/* first-run screen */
+#onboarding {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+  background: rgba(10, 11, 15, .92); backdrop-filter: blur(6px);
+}
+#onboarding[hidden] { display: none; }
+.onboard-card {
+  width: 460px; padding: 26px 28px 22px; border-radius: 18px;
+  background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 30px 80px rgba(0,0,0,.55); text-align: center;
+}
+.onboard-art img { width: 108px; height: 108px; object-fit: contain; }
+.onboard-card h2 { margin: 6px 0 8px; font-size: 19px; }
+.onboard-card p { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+button.wide { display: block; width: 100%; padding: 11px 14px; text-align: center; }
+.onboard-step {
+  margin: 16px 0 8px; padding: 14px; border-radius: 12px; text-align: left;
+  background: rgba(255,184,77,.08); border: 1px solid rgba(255,184,77,.3);
+}
+.onboard-step.ok { background: rgba(139,224,164,.10); border-color: rgba(139,224,164,.35); }
+.onboard-step strong { display: block; margin-bottom: 4px; }
+.onboard-step span { color: #cfd3de; font-size: 12px; display: block; margin-bottom: 10px; }
+.fine { color: var(--muted); font-size: 11px; margin: 14px 0 12px; }

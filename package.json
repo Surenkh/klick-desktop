@@ -1,7 +1,7 @@
 {
   "name": "klick",
   "productName": "Klick",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Keyboard sounds with Kiki, your little keycap companion - macOS and Windows.",
   "main": "src/main/index.js",
   "author": "Suren",

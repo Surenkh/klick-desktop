@@ -10,3 +10,5 @@ assets/icon.iconset/
 .electron-builder-cache/
 incoming/
 .electron-x64/
+.gh/
+tools/

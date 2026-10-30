@@ -3,7 +3,7 @@
 // lives in the modules beside it; this file only decides order and connections.
 
 const path = require('node:path');
-const { app, globalShortcut, nativeImage, ipcMain, shell, powerSaveBlocker } = require('electron');
+const { app, globalShortcut, nativeImage, ipcMain, shell } = require('electron');
 
 const store = require('./store');
 const { createLogger } = require('./logger');
@@ -116,6 +116,11 @@ function simulateKey() {
   return true;
 }
 
+let lastLatency = null;
+function recordLatency(sample) {
+  lastLatency = { ...sample, at: Date.now() };
+}
+
 function quit() {
   if (quitting) return;
   quitting = true;
@@ -146,14 +151,6 @@ if (!app.requestSingleInstanceLock()) {
       const fallback = packs.has('laptop') ? 'laptop' : packs.list()[0];
       log(`pack ${store.get().pack} is gone; using ${fallback}`);
       store.merge({ pack: fallback });
-    }
-
-    // a hidden window's audio graph can be suspended by the OS; this keeps it alive
-    try {
-      powerSaveBlocker.start('prevent-app-suspension');
-      log('power save blocker on (audio stays awake)');
-    } catch (err) {
-      log(`power save blocker failed: ${err.message}`);
     }
 
     windows = createWindows({
@@ -232,7 +229,9 @@ if (!app.requestSingleInstanceLock()) {
       simulateKey,
       quit,
       openSettings: () => windows.openSettings(),
-      logFile: () => path.join(app.getPath('userData'), 'klick.log')
+      logFile: () => path.join(app.getPath('userData'), 'klick.log'),
+      recordLatency,
+      lastLatency: () => lastLatency
     });
 
     try {
@@ -249,7 +248,8 @@ if (!app.requestSingleInstanceLock()) {
       globalShortcut.register('CommandOrControl+Alt+Shift+Q', quit);
     } catch {}
 
-    if (process.argv.includes('--settings')) windows.openSettings();
+    if (!store.get().onboarded) windows.openSettings({ onboarding: true });
+    else if (process.argv.includes('--settings')) windows.openSettings();
     log('ready');
   });
 }

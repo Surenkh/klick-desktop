@@ -5,7 +5,8 @@ function registerIpc(ctx) {
   const { ipcMain, shell } = require('electron');
   const {
     store, packs, cueFiles, agents, cues, audio, windows,
-    keyboardStatus, applySettings, simulateKey, quit, openSettings
+    keyboardStatus, applySettings, simulateKey, quit, openSettings,
+    recordLatency, lastLatency
   } = ctx;
 
   ipcMain.handle('settings:get', () => store.get());
@@ -44,6 +45,10 @@ function registerIpc(ctx) {
     shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent');
     return true;
   });
+
+  ipcMain.handle('audio:latency', (_event, sample) => { recordLatency(sample); return true; });
+  ipcMain.handle('audio:latency:get', () => lastLatency());
+  ipcMain.handle('app:onboarded', () => { store.merge({ onboarded: true }); return true; });
 
   ipcMain.handle('demo:tap', () => simulateKey());
   ipcMain.handle('demo:cue', (_event, kind) => cues.play(kind));

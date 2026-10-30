@@ -5,6 +5,7 @@ const { app } = require('electron');
 
 const DEFAULTS = {
   enabled: true,
+  onboarded: false,
   pack: 'laptop',
   volume: 0.7,
   buddy: true,

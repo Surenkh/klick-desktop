@@ -188,6 +188,43 @@ async function boot() {
     $('stXp').textContent = s.xp || 0;
     $('stLevel').textContent = s.level || 1;
   });
+  // ---- first run -----------------------------------------------------------
+  const overlay = $('onboarding');
+  const showOnboarding = () => { overlay.hidden = false; };
+  if (new URLSearchParams(location.search).get('onboarding') === '1') showOnboarding();
+  window.clackle.onOnboarding(showOnboarding);
+  $('onboardTest').addEventListener('click', () => window.clackle.demoTap());
+  $('onboardOpenPerm').addEventListener('click', () => window.clackle.openPrivacy());
+  $('onboardDone').addEventListener('click', async () => {
+    await window.clackle.onboarded();
+    overlay.hidden = true;
+  });
+
+  const paintPerm = (st) => {
+    if (!st) return;
+    const step = $('onboardPerm');
+    const ok = st.ok || st.reason === 'preview';
+    step.classList.toggle('ok', ok);
+    $('onboardPermTitle').textContent = ok ? 'Listening for keys' : 'One permission: Input Monitoring';
+    $('onboardPermText').textContent = ok
+      ? 'All set. Type anything to hear it.'
+      : 'macOS asks once so Klick can hear that a key went down. It never sees what you type, and it can never block a keystroke.';
+    $('onboardOpenPerm').hidden = ok;
+  };
+  paintPerm(await window.clackle.hookStatus());
+  window.clackle.onHookStatus(paintPerm);
+
+  // ---- measured latency ----------------------------------------------------
+  const paintLatency = async () => {
+    const sample = await window.clackle.latency();
+    if (!sample) { $('latency').textContent = 'measuring…'; return; }
+    const device = (sample.baseMs || 0) + (sample.outputMs || 0);
+    const total = device + (sample.handlingMs || 0);
+    $('latency').textContent = `${total.toFixed(1)} ms (device ${device.toFixed(1)} + pipeline ${(sample.handlingMs || 0).toFixed(1)})`;
+  };
+  setInterval(paintLatency, 4000);
+  paintLatency();
+
   const banner = $('permBanner');
   const applyHook = (st) => {
     if (!st) return;

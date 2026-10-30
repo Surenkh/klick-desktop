@@ -28,6 +28,13 @@ function createWindows({ appRoot, preloadPath, getSettings, onBuddyMoved, log })
       }
     });
     audio.loadFile(path.join(appRoot, 'src', 'renderer', 'audio.html'));
+    // a crashed audio renderer would silently kill every sound
+    audio.webContents.on('render-process-gone', (_event, details) => {
+      log(`audio renderer gone (${details.reason}); recreating`);
+      try { audio.destroy(); } catch {}
+      audio = null;
+      setTimeout(() => audioWindow(), 500);
+    });
     return audio;
   };
 
@@ -91,10 +98,11 @@ function createWindows({ appRoot, preloadPath, getSettings, onBuddyMoved, log })
     }
   };
 
-  const openSettings = () => {
+  const openSettings = (options = {}) => {
     if (settings && !settings.isDestroyed()) {
       settings.show();
       settings.focus();
+      if (options.onboarding) settings.webContents.send('onboarding:show');
       return settings;
     }
     settings = new BrowserWindow({
@@ -109,7 +117,9 @@ function createWindows({ appRoot, preloadPath, getSettings, onBuddyMoved, log })
       trafficLightPosition: { x: 14, y: 14 },
       webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false }
     });
-    settings.loadFile(path.join(appRoot, 'src', 'renderer', 'settings.html'));
+    const file = path.join(appRoot, 'src', 'renderer', 'settings.html');
+    if (options.onboarding) settings.loadFile(file, { query: { onboarding: '1' } });
+    else settings.loadFile(file);
     settings.once('ready-to-show', () => settings.show());
     settings.on('closed', () => { settings = null; });
     return settings;
