@@ -9,6 +9,34 @@
         margin: 0; height: 100%; background: transparent; overflow: hidden;
         -webkit-user-select: none; cursor: default;
       }
+      #tapPill {
+        position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%);
+        padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+        background: rgba(18, 20, 28, .74); border: 1px solid rgba(255, 255, 255, .16);
+        color: #fff; font: 600 10.5px/1.25 -apple-system, system-ui, sans-serif;
+        letter-spacing: .2px; pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .38);
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      }
+      #tapPill[hidden] { display: none; }
+      #celebrate { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+      .confetti {
+        position: absolute; width: 6px; height: 6px; border-radius: 2px;
+        left: 50%; top: 54%; animation: fall 950ms cubic-bezier(.2, .7, .3, 1) forwards;
+      }
+      @keyframes fall {
+        to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+      }
+      #toast {
+        position: absolute; left: 50%; top: 2px; transform: translateX(-50%) scale(.92);
+        padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+        background: linear-gradient(180deg, #ffd479, #ffb84d); color: #241a08;
+        font: 700 10.5px/1.3 -apple-system, system-ui, sans-serif;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, .35); opacity: 0;
+        transition: opacity 180ms ease, transform 220ms cubic-bezier(.2, .9, .3, 1.3);
+      }
+      #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
       #stage {
         position: absolute; inset: 0; display: grid; place-items: center;
         -webkit-app-region: drag;
@@ -105,6 +133,8 @@
   </head>
   <body>
     <div id="stage">
+      <div id="celebrate"></div>
+      <div id="toast"></div>
       <div id="float">
         <div id="char" hidden>
           <img class="klick" id="k0" alt="Kiki" />
@@ -293,6 +323,62 @@
       });
     </script>
   
+  <script>
+  // live tap pill + milestone celebration
+  (function () {
+    const pill = document.getElementById('tapPill');
+    const count = document.getElementById('tapCount');
+    const celebrate = document.getElementById('celebrate');
+    const toast = document.getElementById('toast');
+    const api = window.klick || {};
+
+    const setCount = (value) => {
+      if (typeof value === 'number') count.textContent = value.toLocaleString('en-US');
+    };
+
+    const party = (milestone) => {
+      // confetti burst
+      const colors = ['#ffb84d', '#8be0a4', '#7fd1ff', '#ff9ad5', '#ffe066'];
+      for (let i = 0; i < 26; i++) {
+        const piece = document.createElement('i');
+        piece.className = 'confetti';
+        const angle = (-Math.PI / 2) + (Math.random() - 0.5) * Math.PI * 1.2;
+        const distance = 40 + Math.random() * 70;
+        piece.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+        piece.style.setProperty('--dy', `${Math.sin(angle) * distance + 40}px`);
+        piece.style.setProperty('--rot', `${Math.random() * 540 - 270}deg`);
+        piece.style.background = colors[i % colors.length];
+        piece.style.left = `${45 + Math.random() * 10}%`;
+        celebrate.appendChild(piece);
+        setTimeout(() => piece.remove(), 1000);
+      }
+      toast.textContent = `🎉 ${milestone.toLocaleString('en-US')} taps!`;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    };
+
+    if (api.onPress) {
+      api.onPress((payload) => {
+        if (!payload) return;
+        setCount(payload.taps);
+        if (payload.milestone) party(payload.milestone);
+      });
+    }
+    if (api.onStats) api.onStats((stats) => setCount(stats && stats.taps));
+    if (api.onSettings) {
+      api.onSettings((settings) => {
+        pill.hidden = settings && settings.showTapCounter === false;
+      });
+    }
+    if (api.getSettings) {
+      api.getSettings().then((settings) => {
+        if (!settings) return;
+        pill.hidden = settings.showTapCounter === false;
+        setCount(settings.taps || 0);
+      }).catch(() => {});
+    }
+  })();
+  </script>
   <script>
   // klick-drag: drag to move the panel, tap to slap (+10 XP)
   (function () {

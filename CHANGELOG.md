@@ -4,6 +4,20 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.4.1 — 2026-10-30
+
+- **Live stats.** Every captured key adds +1 tap and +1 XP, Kiki slaps give +10 XP;
+  level and hat are recomputed in C (`stats.c`) and pushed to Settings and Kiki as
+  they change, so Today and the buddy update while you type.
+- **Tap pill on Kiki** — a compact counter under the character, on by default,
+  toggleable in Buddy settings.
+- **Milestones** — celebrate every 100 / 500 / 1,000 taps (or off): confetti burst,
+  "🎉 N taps!" toast, party mood and a brighter cue. Detected once per threshold.
+- **Welcome screen accessible** — menu bar → *Show welcome screen* re-runs the
+  onboarding flow, and the permission banner follows capture state live.
+- Native test suite grew to 43 checks, including the XP curve, hat unlocks and
+  milestone crossing.
+
 ## 0.4.0 — 2026-10-30
 
 **Klick is now a native macOS app. No Electron, no Chromium, no Node.**

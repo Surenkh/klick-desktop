@@ -22,6 +22,7 @@ static const char *kBundleID = "app.klick.Klick";
 // ---------------------------------------------------------------- key mapping
 
 #include "keymap.h"
+#include "stats.h"
 
 // ------------------------------------------------------------------- app
 
@@ -42,6 +43,8 @@ static const char *kBundleID = "app.klick.Klick";
 
 - (void)buddyPulse;
 - (void)buddyMood:(NSString *)mood;
+- (NSDictionary *)statsPayload;
+- (void)pushStats:(NSDictionary *)payload;
 @end
 
 static AppDelegate *gApp = nil;
@@ -80,6 +83,7 @@ static void *agent_listener_thread(void *context) {
 
 typedef struct { atomic_uint taps; atomic_uint xp; } Counters;
 static Counters app_counters;
+static _Atomic uint32_t app_last_pulse_taps;
 
 // Mirrors of the few settings the tap thread needs: no ObjC on the hot path.
 static atomic_bool g_enabled;
@@ -224,6 +228,7 @@ static void mirror_settings(NSDictionary *settings) {
     }
     [self flushCountersIfNeeded];
     [self pushStatusToWeb];
+    [self pushStats:[self statsPayload]];
 
     static unsigned long lastVoices = 0;
     unsigned long voices = audio_voice_count();
@@ -428,6 +433,9 @@ static void mirror_settings(NSDictionary *settings) {
     kiki.state = [self.settings[@"buddy"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff;
     [menu addItem:kiki];
 
+    NSMenuItem *welcome = [[NSMenuItem alloc] initWithTitle:@"Show welcome screen" action:@selector(showWelcome:) keyEquivalent:@""];
+    [menu addItem:welcome];
+
     NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…" action:@selector(openSettings:) keyEquivalent:@","];
     [menu addItem:settingsItem];
 
@@ -561,11 +569,18 @@ static void mirror_settings(NSDictionary *settings) {
     [self log:@"agent event: %@", event];
 }
 
+- (void)showWelcome:(id)sender {
+    self.settings[@"onboarded"] = @NO;
+    [self saveSettings];
+    if (self.settingsWindow) { [self.settingsWindow close]; }
+    [self openSettings:nil];
+}
+
 - (void)showBuddy {
     if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
 
     NSRect visible = [NSScreen mainScreen].visibleFrame;
-    CGFloat width = 140, height = 140;
+    CGFloat width = 160, height = 176;
     CGFloat x = num(self.settings[@"buddyX"], 0);
     CGFloat y = num(self.settings[@"buddyY"], 0);
     if (x <= 0 && y <= 0) {
@@ -613,8 +628,51 @@ static void mirror_settings(NSDictionary *settings) {
     [self log:@"buddy panel hidden"];
 }
 
+- (NSDictionary *)statsPayload {
+    uint32_t taps = atomic_load(&app_counters.taps);
+    uint32_t xp = atomic_load(&app_counters.xp);
+    int level = klick_level_for(xp);
+    const char *hat = klick_hat_for(level);
+    return @{ @"taps": @(taps), @"xp": @(xp), @"level": @(level),
+              @"hat": hat ? @(hat) : [NSNull null] };
+}
+
+- (void)pushStats:(NSDictionary *)payload {
+    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+    NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    if (self.webView) {
+        NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
+        [self.webView evaluateJavaScript:js completionHandler:nil];
+    }
+    if (self.buddyWeb) {
+        NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
+        [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+    }
+}
+
 - (void)buddyPulse {
-    [self.buddyWeb evaluateJavaScript:@"window.__klickEvent && window.__klickEvent('press')" completionHandler:nil];
+    if (!self.buddyWeb) return;
+
+    uint32_t before = atomic_load(&app_last_pulse_taps);
+    uint32_t now = atomic_load(&app_counters.taps);
+    atomic_store(&app_last_pulse_taps, now);
+
+    uint32_t every = (uint32_t)num(self.settings[@"celebrateEvery"], 100);
+    uint32_t milestone = klick_milestone_crossed(before, now, every);
+
+    NSMutableDictionary *payload = [[self statsPayload] mutableCopy];
+    payload[@"milestone"] = @(milestone);
+
+    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+    NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('press', %@)", text];
+    [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+
+    if (milestone > 0) {
+        [self log:@"milestone %u taps", milestone];
+        audio_trigger_cue_rate(0, fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7)), 1.18f);
+        [self buddyMood:@"party"];
+    }
 }
 
 - (void)buddyMood:(NSString *)mood {
@@ -749,6 +807,7 @@ static void mirror_settings(NSDictionary *settings) {
         atomic_fetch_add(&app_counters.xp, 10);
         atomic_fetch_add(&app_counters.taps, 1);
         [self buddyMood:@"party"];
+        [self pushStats:[self statsPayload]];
         [self log:@"kiki slapped (+10 xp)"];
         [self saveSettings];
         return @YES;

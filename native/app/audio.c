@@ -491,6 +491,10 @@ bool audio_load_cues(const char *dir) {
 void audio_trigger_cue(int which, float gain) {
     audio_trigger(200 + which, 0.0f, gain, 1.0f, mach_absolute_time());
 }
+
+void audio_trigger_cue_rate(int which, float gain, float rate) {
+    audio_trigger(200 + which, 0.0f, gain, rate, mach_absolute_time());
+}
 OSStatus audio_init_status(void) { return g_init_status; }
 OSStatus audio_start_status(void) { return g_start_status; }
 unsigned long audio_render_count(void) { return g_render_count; }

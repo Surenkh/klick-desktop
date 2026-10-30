@@ -33,6 +33,7 @@ bool audio_take_reconfigure_flag(void);
 bool audio_is_running(void);
 bool audio_load_cues(const char *dir);
 void audio_trigger_cue(int which, float gain);
+void audio_trigger_cue_rate(int which, float gain, float rate);
 void audio_test_mix(float *interleaved, uint32_t frames);
 OSStatus audio_init_status(void);
 OSStatus audio_start_status(void);

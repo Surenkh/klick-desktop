@@ -176,6 +176,14 @@ async function boot() {
       cfg = await window.klick.setSettings({ [key]: e.target.checked });
     });
   }
+  $('showTapCounter').addEventListener('change', async (e) => {
+    cfg = await window.klick.setSettings({ showTapCounter: e.target.checked });
+    applyToControls();
+  });
+  $('celebrateEvery').addEventListener('change', async (e) => {
+    cfg = await window.klick.setSettings({ celebrateEvery: Number(e.target.value) });
+    applyToControls();
+  });
   $('tapKiki').addEventListener('click', () => window.klick.demoTap());
   $('cueDone').addEventListener('click', () => window.klick.demoCue('done'));
   $('cueNeeds').addEventListener('click', () => window.klick.demoCue('needs-you'));
@@ -184,9 +192,10 @@ async function boot() {
   $('quit').addEventListener('click', () => window.klick.quit());
 
   window.klick.onStats((s) => {
-    $('stTaps').textContent = s.taps || 0;
-    $('stXp').textContent = s.xp || 0;
-    $('stLevel').textContent = s.level || 1;
+    $('stTaps').textContent = s.taps ?? 0;
+    $('stXp').textContent = s.xp ?? 0;
+    $('stLevel').textContent = s.level ?? 1;
+    if (s.hat !== undefined && $('stHat')) $('stHat').textContent = s.hat || 'none';
   });
   // ---- first run -----------------------------------------------------------
   const overlay = $('onboarding');

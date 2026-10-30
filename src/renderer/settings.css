@@ -202,3 +202,13 @@ button.wide { display: block; width: 100%; padding: 11px 14px; text-align: cente
 .onboard-step { text-align: left; }
 .onboard-step.ok { background: rgba(139,224,164,.10); border-color: rgba(139,224,164,.35); }
 .section-title { font-size: 14px; color: var(--muted); font-weight: 600; margin: 22px 0 8px; }
+
+/* buddy tab controls */
+.field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.field > span { color: var(--text); font-size: 12.5px; }
+.field select {
+  appearance: none; background: #1b1f29; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 26px 7px 10px; font-size: 12.5px; cursor: pointer;
+}
+.field select:focus { outline: 2px solid rgba(255, 184, 77, .45); outline-offset: 1px; }

@@ -10,6 +10,7 @@
 
 #include "audio.h"
 #include "keymap.h"
+#include "stats.h"
 
 static int failures = 0;
 
@@ -44,6 +45,31 @@ int main(void) {
     CHECK(fabsf(a.pan) <= 0.66f && fabsf(p.pan) <= 0.66f, "pan stays inside the safe range");
 
     // ---- packs: real WAVs, resampled to the engine rate
+    printf("stats\n");
+    CHECK(klick_level_for(0) == 1, "0 xp is level 1");
+    CHECK(klick_level_for(119) == 1, "119 xp is still level 1");
+    CHECK(klick_level_for(120) == 2, "120 xp reaches level 2");
+    CHECK(klick_level_for(360) == 3, "360 xp reaches level 3");
+    CHECK(klick_level_for(720) == 4, "720 xp reaches level 4");
+    CHECK(klick_level_for(1080) == 4, "1080 xp is still level 4");
+    CHECK(klick_level_for(1200) == 5, "1200 xp reaches level 5");
+    CHECK(klick_level_for(100000) > 20, "large xp keeps rising");
+
+    CHECK(klick_hat_for(1) == NULL, "no hat at level 1");
+    CHECK(klick_hat_for(2) != NULL, "party hat at level 2");
+    CHECK(strcmp(klick_hat_for(4), "sunglasses") == 0, "sunglasses at level 4");
+    CHECK(strcmp(klick_hat_for(6), "headphones") == 0, "headphones at level 6");
+    CHECK(strcmp(klick_hat_for(8), "beanie") == 0, "beanie at level 8");
+    CHECK(strcmp(klick_hat_for(10), "chef") == 0, "chef at level 10");
+    CHECK(strcmp(klick_hat_for(15), "crown") == 0, "crown at level 15");
+
+    CHECK(klick_milestone_crossed(99, 100, 100) == 100, "99 -> 100 crosses the 100 milestone");
+    CHECK(klick_milestone_crossed(100, 101, 100) == 0, "no repeat celebration at 101");
+    CHECK(klick_milestone_crossed(0, 250, 100) == 200, "0 -> 250 reports the latest milestone (200)");
+    CHECK(klick_milestone_crossed(499, 500, 100) == 500, "499 -> 500 crosses 500");
+    CHECK(klick_milestone_crossed(10, 20, 0) == 0, "milestones can be off");
+    CHECK(klick_milestone_crossed(20, 10, 100) == 0, "counters going backwards never celebrate");
+
     printf("packs\n");
     int packs = audio_load_packs("assets/packs");
     CHECK(packs == 4, "four packs load from assets/packs (got %d)", packs);
