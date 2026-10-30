@@ -34,7 +34,7 @@ build_arch() {
 
   clang -fobjc-arc -O2 -arch "$ARCH" -mmacosx-version-min=14.0 -I native/app \
     -o "$APP/Contents/MacOS/Klick" \
-    native/app/main.m native/app/audio.c native/app/capture.c native/app/keymap.c native/app/stats.c native/app/keymap.c \
+    native/app/main.m native/app/audio.c native/app/capture.c native/app/keymap.c native/app/stats.c \
     -framework Cocoa -framework WebKit -framework ServiceManagement \
     -framework AudioToolbox -framework CoreAudio -framework ApplicationServices
 

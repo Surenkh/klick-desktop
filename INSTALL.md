@@ -4,8 +4,8 @@ Download the DMG for your Mac and drag **Klick.app** onto the Applications folde
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1/M2/M3/M4) | `Klick-0.4.0-arm64.dmg` |
-| Intel | `Klick-0.4.0-x64.dmg` |
+| Apple silicon (M1/M2/M3/M4) | `Klick-0.4.3-arm64.dmg` |
+| Intel | `Klick-0.4.3-x64.dmg` |
 
 Not sure which? Apple menu →  About This Mac → the *Chip* line says Apple M… or Intel.
 
@@ -37,10 +37,10 @@ and no network code in the app at all.
 ## Verify the download (optional)
 
 ```
-shasum -a 256 Klick-0.4.0-arm64.dmg
-# 326c6a49583a029059ec327ac43549ebcc5c268c79a9874595e5a123a9430240
-shasum -a 256 Klick-0.4.0-x64.dmg
-# 35617835fac8f3790915e7abf28c0439f7a7ba1e2fd4d7c880ede28ec6d4b5ff
+shasum -a 256 Klick-0.4.3-arm64.dmg
+# 65ec893cfb180846aa28464bdb818dcf700e7ef06363ec325358b87c47c7dfa4
+shasum -a 256 Klick-0.4.3-x64.dmg
+# b0b0f3e8b4d235c5de35f37693b223cad92d7b848a82f0d9a3083d7dcf8c3cd7
 ```
 
 ## Uninstall

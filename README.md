@@ -14,8 +14,8 @@ Grab the DMG for your Mac from [Releases](https://github.com/Surenkh/klick-deskt
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M4) | `Klick-0.4.0-arm64.dmg` |
-| Intel | `Klick-0.4.0-x64.dmg` |
+| Apple silicon (M1–M4) | `Klick-0.4.3-arm64.dmg` |
+| Intel | `Klick-0.4.3-x64.dmg` |
 
 Open the DMG, drag **Klick** to Applications, then launch it. macOS will refuse an
 unsigned app once: **System Settings → Privacy & Security → Open Anyway**. Klick then
