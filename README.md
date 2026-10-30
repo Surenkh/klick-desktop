@@ -164,12 +164,7 @@ a mascot name to hang the brand on.
 
 Code: **MIT** — see [LICENSE](LICENSE).
 
-Not MIT, on purpose:
-
-| Asset | Rights |
-| --- | --- |
-| Kiki artwork (`assets/buddy/`, `assets/icon.*`, `docs/cover.jpg`) | © Suren Khachatryan, all rights reserved; included with the project |
-| Sound packs (`assets/packs/`) and cues (`assets/cues/`) | derived from Mixkit recordings under the Mixkit Free License; may be used in the app but not redistributed as standalone audio |
-
-"The Klick name and the Kiki character belong to this project." See
-[CREDITS.md](CREDITS.md) for per-file provenance.
+Not MIT, on purpose: Kiki's artwork is © Suren Khachatryan (all rights reserved),
+and the sound packs/cues carry the Mixkit Free License and may not be redistributed
+as standalone audio. Details in [ASSET-LICENSES.md](ASSET-LICENSES.md) and
+[CREDITS.md](CREDITS.md).
