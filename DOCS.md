@@ -1,6 +1,6 @@
 # Klick — functionality and internals
 
-**Current release: 0.4.0** — native macOS 14+ (arm64 and x86_64), ~7 MB, no Electron.
+**Current release: 0.4.3** — native macOS 14+ (arm64 and x86_64), 7 MB.
 Key-to-ear latency is ~2–4 ms: see [ARCHITECTURE.md](ARCHITECTURE.md) for the
 CGEventTap → lock-free ring → CoreAudio path.
 

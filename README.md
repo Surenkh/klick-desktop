@@ -3,8 +3,7 @@
 Keyboard sounds for macOS, with a companion called **Kiki** — a little keycap who
 presses along with you.
 
-Native. **7 MB**, no Electron, no Chromium, no Node. Key-to-ear latency is
-**~2–4 ms**.
+A native macOS app: **7 MB**, and **~2–4 ms** from key to ear.
 
 ![Klick](docs/cover.jpg)
 
@@ -39,7 +38,7 @@ Only **Input Monitoring**. Klick uses a listen-only `CGEventTap`, so the OS forb
 it from modifying, blocking or delaying a keystroke. No Accessibility, no Screen
 Recording, no microphone, no network, no account, no telemetry.
 
-## Why it is this small and this fast
+## Why it is small and fast
 
 | Metric | Klick 0.4.3 (native) |
 | --- | --- |
@@ -48,9 +47,9 @@ Recording, no microphone, no network, no account, no telemetry.
 | Key-to-ear latency | **~2–4 ms** |
 | Runtime | AppKit + CoreAudio |
 
-The key path never touches JavaScript: the `CGEventTap` thread pushes into a
-lock-free ring buffer that the CoreAudio render callback drains, with a 64-frame
-hardware buffer. Details in [ARCHITECTURE.md](ARCHITECTURE.md).
+A key press goes straight from the system key tap into a lock-free buffer that the
+audio engine drains, with a 64-frame hardware buffer. Nothing in the middle can
+delay it. Details in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Build from source
 

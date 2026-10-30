@@ -101,9 +101,7 @@ sh scripts/build-native.sh    # build + sign for this Mac
 sh scripts/package-native.sh  # both DMGs into dist/
 ```
 
-## Legacy
+## Older sources
 
-`src/main`, `src/preload`, `src/renderer/audio.js` and the N-API addon in
-`native/capture.c` belong to the **0.3.x Electron implementation**. They are kept
-for reference and as a fallback release (v0.3.1); the shipping app is
-`native/app`.
+`src/main`, `src/preload`, `src/renderer/audio.js` and `native/capture.c` are from the
+previous 0.3.x codebase. They are not part of the app that ships; `native/app` is.

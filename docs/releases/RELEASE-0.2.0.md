@@ -4,7 +4,7 @@
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M4) | `Klick-0.2.0-arm64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.2.0-arm64.dmg` |
 | Intel | `Klick-0.2.0-x64.dmg` |
 
 Open the DMG, drag **Klick** to Applications. First launch: macOS cannot verify the

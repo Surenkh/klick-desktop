@@ -6,7 +6,7 @@ Native macOS, 7 MB, no Electron. This release is the polish pass on top of 0.4.0
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M4) | `Klick-0.4.3-arm64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.4.3-arm64.dmg` |
 | Intel | `Klick-0.4.3-x64.dmg` |
 
 Drag **Klick** to Applications, launch, allow it once via **System Settings → Privacy &

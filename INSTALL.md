@@ -4,7 +4,7 @@ Download the DMG for your Mac and drag **Klick.app** onto the Applications folde
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1/M2/M3/M4) | `Klick-0.4.3-arm64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.4.3-arm64.dmg` |
 | Intel | `Klick-0.4.3-x64.dmg` |
 
 Not sure which? Apple menu →  About This Mac → the *Chip* line says Apple M… or Intel.

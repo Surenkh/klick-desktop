@@ -7,7 +7,7 @@ listen-only `CGEventTap`, with the settings UI in `WKWebView`.
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M4) | `Klick-0.4.0-arm64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.4.0-arm64.dmg` |
 | Intel | `Klick-0.4.0-x64.dmg` |
 
 Drag **Klick** to Applications, launch, allow it once via **System Settings →
