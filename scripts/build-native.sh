@@ -48,8 +48,21 @@ echo "app:  $APP  ($(du -sh "$APP" | cut -f1))"
 
 if [ "${1:-}" = "--install" ]; then
   echo "== installing to /Applications"
+  pkill -f "/Applications/Klick.app/Contents/MacOS/Klick" 2>/dev/null || true
+  pkill -f "build/native/Klick.app/Contents/MacOS/Klick" 2>/dev/null || true
+  sleep 1
   rm -rf /Applications/Klick.app
   cp -R "$APP" /Applications/
+
+  # the bundle must actually carry the new UI — fail loudly instead of shipping stale HTML
+  for marker in showTapCounter celebrateEvery tapPill; do
+    if ! grep -q "$marker" /Applications/Klick.app/Contents/Resources/web/*.html \
+                                   /Applications/Klick.app/Contents/Resources/web/*.js; then
+      echo "ERROR: $marker missing from the installed bundle" >&2
+      exit 1
+    fi
+  done
+  echo "   bundle verified: tap-counter controls + buddy pill present"
   LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
   "$LSREG" -u "$PWD/$APP" 2>/dev/null || true
   pkill -f "/Applications/Klick.app/Contents/MacOS/Klick" 2>/dev/null || true

@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <sys/file.h>
+#include <fcntl.h>
 
 #include "audio.h"
 #include "capture.h"
@@ -183,6 +185,19 @@ static void mirror_settings(NSDictionary *settings) {
         audio_device_rate(), audio_pack_count()];
 
     NSArray *args = [[NSProcessInfo processInfo] arguments];
+    if ([args containsObject:@"--demo"]) {
+        [self log:@"demo: 3 taps through the JS bridge"];
+        for (int i = 0; i < 3; i++) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((1.5 + i * 0.4) * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                atomic_fetch_add(&app_counters.taps, 1);
+                atomic_fetch_add(&app_counters.xp, 1);
+                [self buddyPulse];
+                [self pushStats:[self statsPayload]];
+            });
+        }
+    }
+
     if ([args containsObject:@"--selftest"]) {
         [self log:@"selftest: triggering 3 key sounds"];
         for (int i = 0; i < 3; i++) {
@@ -242,6 +257,13 @@ static void mirror_settings(NSDictionary *settings) {
     if (!loggedRender && audio_render_count() > 0) {
         loggedRender = YES;
         [self log:@"audio render callback running (%lu slices)", audio_render_count()];
+    }
+
+    BOOL healthy = klick_capture_is_running();
+    if (healthy != self.captureOK) {
+        self.captureOK = healthy;
+        [self log:@"capture %@", healthy ? @"running" : @"lost (permission revoked?)"];
+        [self pushStatusToWeb];
     }
 
     // permission can be granted while the app is open: retry every 2 seconds
@@ -358,6 +380,7 @@ static void mirror_settings(NSDictionary *settings) {
     if (index == NSNotFound) index = 0;
     self.activePack = (int)index;
     audio_select_pack(self.activePack);
+    [self rebuildMenu];
     [self log:@"packs loaded: %d, active: %@", count, self.packNames.count ? self.packNames[index] : @"none"];
 }
 
@@ -433,9 +456,6 @@ static void mirror_settings(NSDictionary *settings) {
     kiki.state = [self.settings[@"buddy"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff;
     [menu addItem:kiki];
 
-    NSMenuItem *welcome = [[NSMenuItem alloc] initWithTitle:@"Show welcome screen" action:@selector(showWelcome:) keyEquivalent:@""];
-    [menu addItem:welcome];
-
     NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…" action:@selector(openSettings:) keyEquivalent:@","];
     [menu addItem:settingsItem];
 
@@ -445,6 +465,8 @@ static void mirror_settings(NSDictionary *settings) {
     [menu addItem:quit];
 
     self.statusItem.menu = menu;
+    [self log:@"menu rebuilt: %lu packs, kiki %@", (unsigned long)self.packNames.count,
+        [self.settings[@"buddy"] boolValue] ? @"on" : @"off"];
 }
 
 - (void)toggleSounds:(NSMenuItem *)item {
@@ -512,6 +534,7 @@ static void mirror_settings(NSDictionary *settings) {
     [window center];
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    config.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
     NSString *bridge = [NSString stringWithContentsOfFile:[[NSBundle mainBundle].resourcePath
         stringByAppendingPathComponent:@"web/bridge.js"] encoding:NSUTF8StringEncoding error:nil];
     WKUserScript *script = [[WKUserScript alloc] initWithSource:bridge
@@ -520,19 +543,19 @@ static void mirror_settings(NSDictionary *settings) {
     [config.userContentController addScriptMessageHandler:self name:@"klick"];
 
     WKWebView *web = [[WKWebView alloc] initWithFrame:window.contentView.bounds configuration:config];
+    web.navigationDelegate = self;
     web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     window.contentView = web;
 
     NSString *html = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"web/settings.html"];
     NSURL *url = [NSURL fileURLWithPath:html];
-    if (![self.settings[@"onboarded"] boolValue]) {
-        url = [NSURL URLWithString:[NSString stringWithFormat:@"%@?onboarding=1", url.absoluteString]];
-    }
+
     NSString *webRoot = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"web"];
     [web loadFileURL:url allowingReadAccessToURL:[NSURL fileURLWithPath:webRoot]];
 
     self.settingsWindow = window;
     self.webView = web;
+    [self log:@"settings window opened"];
     [window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 }
@@ -569,13 +592,6 @@ static void mirror_settings(NSDictionary *settings) {
     [self log:@"agent event: %@", event];
 }
 
-- (void)showWelcome:(id)sender {
-    self.settings[@"onboarded"] = @NO;
-    [self saveSettings];
-    if (self.settingsWindow) { [self.settingsWindow close]; }
-    [self openSettings:nil];
-}
-
 - (void)showBuddy {
     if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
 
@@ -600,6 +616,7 @@ static void mirror_settings(NSDictionary *settings) {
     panel.ignoresMouseEvents = NO;
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    config.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
     NSString *bridge = [NSString stringWithContentsOfFile:[[NSBundle mainBundle].resourcePath
         stringByAppendingPathComponent:@"web/bridge.js"] encoding:NSUTF8StringEncoding error:nil];
     [config.userContentController addUserScript:[[WKUserScript alloc] initWithSource:bridge
@@ -638,11 +655,14 @@ static void mirror_settings(NSDictionary *settings) {
 }
 
 - (void)pushStats:(NSDictionary *)payload {
-    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:NSJSONWritingFragmentsAllowed error:nil];
     NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    if (!text) return;
     if (self.webView) {
         NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
-        [self.webView evaluateJavaScript:js completionHandler:nil];
+        [self.webView evaluateJavaScript:js completionHandler:^(id r, NSError *e) {
+            if (e) [self log:@"stats eval error: %@", e.localizedDescription];
+        }];
     }
     if (self.buddyWeb) {
         NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
@@ -663,8 +683,9 @@ static void mirror_settings(NSDictionary *settings) {
     NSMutableDictionary *payload = [[self statsPayload] mutableCopy];
     payload[@"milestone"] = @(milestone);
 
-    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+    NSData *json = [NSJSONSerialization dataWithJSONObject:payload options:NSJSONWritingFragmentsAllowed error:nil];
     NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    if (!text) return;
     NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('press', %@)", text];
     [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
 
@@ -689,6 +710,19 @@ static void mirror_settings(NSDictionary *settings) {
     [self pushSettingsToWeb];
 }
 
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    if (webView != self.webView) return;
+    [self log:@"settings page loaded"];
+    [webView evaluateJavaScript:@"window.__klickEvent ? 'bridge-ok' : 'bridge-missing'"
+              completionHandler:^(id result, NSError *error) {
+        [self log:@"bridge probe: %@ %@", result ?: @"nil", error ? error.localizedDescription : @""];
+    }];
+    if (![self.settings[@"onboarded"] boolValue]) {
+        [self pushEvent:@"onboarding" payload:@{}];
+    }
+    [self pushStats:[self statsPayload]];
+}
+
 - (void)windowWillClose:(NSNotification *)note {
     if (note.object == self.settingsWindow) {
         // lazy: drop the whole web view so idle RAM stays small
@@ -709,7 +743,16 @@ static void mirror_settings(NSDictionary *settings) {
     NSDictionary *args = [body[@"args"] isKindOfClass:[NSDictionary class]] ? body[@"args"] : @{};
 
     id result = [self handleMethod:method args:args];
-    NSData *json = [NSJSONSerialization dataWithJSONObject:(result ?: [NSNull null]) options:0 error:nil];
+    if (!result) result = [NSNull null];
+    NSError *jsonError = nil;
+    // scalars (bools, strings) are only legal with the fragments flag
+    NSData *json = [NSJSONSerialization dataWithJSONObject:result
+                                                   options:NSJSONWritingFragmentsAllowed
+                                                     error:&jsonError];
+    if (!json) {
+        [self log:@"bridge: cannot encode reply for %@ (%@)", method, jsonError.localizedDescription];
+        json = [@"null" dataUsingEncoding:NSUTF8StringEncoding];
+    }
     NSString *payload = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
     NSString *js = [NSString stringWithFormat:@"window.__klickResolve(%@, %@)",
                     [self jsonQuote:ident], payload ?: @"null"];
@@ -743,14 +786,16 @@ static void mirror_settings(NSDictionary *settings) {
             ageMs = ((double)(mach_absolute_time() - last) * tb.numer / tb.denom) / 1e6;
         }
         double nowMs = [[NSDate date] timeIntervalSince1970] * 1000.0;
-        return @{ @"ok": @(self.captureOK), @"reason": self.captureOK ? [NSNull null] : @"permission",
+        BOOL healthy = klick_capture_is_running();
+        return @{ @"ok": @(healthy), @"reason": healthy ? [NSNull null] : @"permission",
                   @"lastKeyAt": last ? @(nowMs - ageMs) : [NSNull null],
                   @"keysToday": @(atomic_load(&app_counters.taps)),
                   @"packs": @(self.packNames.count) };
     }
     if ([method isEqualToString:@"hookStatus"]) {
-        return @{ @"ok": @(self.captureOK), @"platform": @"darwin",
-                  @"reason": self.captureOK ? [NSNull null] : @"permission" };
+        BOOL healthy = klick_capture_is_running();
+        return @{ @"ok": @(healthy), @"platform": @"darwin",
+                  @"reason": healthy ? [NSNull null] : @"permission" };
     }
     if ([method isEqualToString:@"latency"]) {
         double deviceMs = (64.0 / (audio_device_rate() > 0 ? audio_device_rate() : 48000.0)) * 1000.0;
@@ -770,7 +815,7 @@ static void mirror_settings(NSDictionary *settings) {
             NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             installed = json[@"hooks"] != nil;
         }
-        return @{ @"claude": @{ @"installed": @(installed) } };
+        return @{ @"claude": @{ @"installed": @(installed), @"events": @[@"done", @"needs-you", @"error"] } };
     }
     if ([method isEqualToString:@"connectAgent"] || [method isEqualToString:@"removeAgent"]) {
         NSString *agent = args[@"agent"] ?: @"";
@@ -800,6 +845,10 @@ static void mirror_settings(NSDictionary *settings) {
             [self rebuildMenu];
         }
         return self.settings;
+    }
+    if ([method isEqualToString:@"jslog"]) {
+        [self log:@"js: %@", args[@"message"] ?: @""];
+        return @YES;
     }
     if ([method isEqualToString:@"slap"]) {
         float gain = fmaxf(0.35f, (float)num(self.settings[@"volume"], 0.7));
@@ -901,13 +950,15 @@ static void mirror_settings(NSDictionary *settings) {
 - (void)pushSettingsToWeb { [self pushEvent:@"settings" payload:self.settings]; }
 - (void)pushStatusToWeb {
     if (!self.webView) return;
-    [self pushEvent:@"hookStatus" payload:@{ @"ok": @(self.captureOK), @"platform": @"darwin",
-                                             @"reason": self.captureOK ? [NSNull null] : @"permission" }];
+    BOOL healthy = klick_capture_is_running();
+    [self pushEvent:@"hookStatus" payload:@{ @"ok": @(healthy), @"platform": @"darwin",
+                                             @"reason": healthy ? [NSNull null] : @"permission" }];
 }
 
 - (void)pushEvent:(NSString *)name payload:(id)payload {
     if (!self.webView) return;
-    NSData *json = [NSJSONSerialization dataWithJSONObject:payload ?: [NSNull null] options:0 error:nil];
+    NSData *json = [NSJSONSerialization dataWithJSONObject:payload ?: [NSNull null]
+                                                   options:NSJSONWritingFragmentsAllowed error:nil];
     NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
     NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent(%@, %@)",
                     [self jsonQuote:name], text ?: @"null"];
@@ -943,6 +994,16 @@ static int run_hook(int argc, const char *argv[]) {
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         if (argc >= 3 && strcmp(argv[1], "--hook") == 0) return run_hook(argc, argv);
+
+        // one Klick only: a second copy would steal the tap and confuse TCC
+        NSString *lockPath = [@"~/Library/Application Support/Klick/klick.lock" stringByExpandingTildeInPath];
+        [[NSFileManager defaultManager] createDirectoryAtPath:[lockPath stringByDeletingLastPathComponent]
+                                  withIntermediateDirectories:YES attributes:nil error:nil];
+        int lockFD = open(lockPath.UTF8String, O_CREAT | O_RDWR, 0644);
+        if (lockFD < 0 || flock(lockFD, LOCK_EX | LOCK_NB) != 0) {
+            NSLog(@"another Klick is already running — exiting");
+            return 0;
+        }
         NSApplication *app = [NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyAccessory];
         AppDelegate *delegate = [[AppDelegate alloc] init];

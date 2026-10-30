@@ -103,7 +103,9 @@ function applyToControls() {
 }
 
 async function renderAgents() {
+  if (!window.klick.agents) return;
   const status = await window.klick.agents();
+  if (!status || typeof status !== 'object') return;
   const host = $('agents');
   host.innerHTML = '';
   for (const [id, a] of Object.entries(status)) {
@@ -112,7 +114,7 @@ async function renderAgents() {
     row.innerHTML = `
       <div class="meta">
         <b>${a.label}</b>
-        <span>${a.events.join(' · ')} — ${a.config}</span>
+        <span>${(a.events || []).join(' · ')} — ${a.config}</span>
       </div>
       <span class="pill ${a.installed ? 'on' : ''}">${a.installed ? 'connected' : 'not connected'}</span>`;
     const btn = document.createElement('button');
@@ -128,6 +130,7 @@ async function renderAgents() {
         $('agentNote').textContent = `${a.label}: ${err.message || err}`;
       }
       await renderAgents();
+  if (window.klick.debug) window.klick.debug('boot: agents done');
     });
     row.appendChild(btn);
     host.appendChild(row);
@@ -144,12 +147,17 @@ async function renderStats() {
 
 // --- wiring -----------------------------------------------------------------
 async function boot() {
+  try {
   cfg = await window.klick.getSettings();
+  if (window.klick.debug) window.klick.debug('boot: settings ' + JSON.stringify(cfg).slice(0, 60));
   const packs = await window.klick.packs();
+  if (window.klick.debug) window.klick.debug('boot: packs ' + JSON.stringify(packs));
   renderPacks(packs);
   applyToControls();
   await renderAgents();
+  if (window.klick.debug) window.klick.debug('boot: agents done');
   await renderStats();
+  if (window.klick.debug) window.klick.debug('boot: stats done');
   preview(cfg.pack);
 
   $('enabled').addEventListener('change', async (e) => {
@@ -176,14 +184,18 @@ async function boot() {
       cfg = await window.klick.setSettings({ [key]: e.target.checked });
     });
   }
-  $('showTapCounter').addEventListener('change', async (e) => {
-    cfg = await window.klick.setSettings({ showTapCounter: e.target.checked });
-    applyToControls();
-  });
-  $('celebrateEvery').addEventListener('change', async (e) => {
-    cfg = await window.klick.setSettings({ celebrateEvery: Number(e.target.value) });
-    applyToControls();
-  });
+  const bindBuddyPrefs = (toggleId, selectId) => {
+    $(toggleId).addEventListener('change', async (e) => {
+      cfg = await window.klick.setSettings({ showTapCounter: e.target.checked });
+      applyToControls();
+    });
+    $(selectId).addEventListener('change', async (e) => {
+      cfg = await window.klick.setSettings({ celebrateEvery: Number(e.target.value) });
+      applyToControls();
+    });
+  };
+  bindBuddyPrefs('showTapCounter', 'celebrateEvery');
+  bindBuddyPrefs('soundTapCounter', 'soundCelebrateEvery');
   $('tapKiki').addEventListener('click', () => window.klick.demoTap());
   $('cueDone').addEventListener('click', () => window.klick.demoCue('done'));
   $('cueNeeds').addEventListener('click', () => window.klick.demoCue('needs-you'));
@@ -196,6 +208,10 @@ async function boot() {
     $('stXp').textContent = s.xp ?? 0;
     $('stLevel').textContent = s.level ?? 1;
     if (s.hat !== undefined && $('stHat')) $('stHat').textContent = s.hat || 'none';
+    if (window.klick.debug && window.__lastStatsTap !== s.taps) {
+      window.__lastStatsTap = s.taps;
+      window.klick.debug(`stats-dom taps=${$('stTaps').textContent} xp=${$('stXp').textContent} level=${$('stLevel').textContent}`);
+    }
   });
   // ---- first run -----------------------------------------------------------
   const overlay = $('onboarding');
@@ -280,10 +296,16 @@ async function boot() {
   setInterval(paintLatency, 2000);
 
   const banner = $('permBanner');
+  let staticBannerState = '';
   const applyHook = (st) => {
     if (!st) return;
     const mac = st.platform === 'darwin';
     banner.hidden = !(mac && !st.ok && st.reason !== 'preview');
+    staticBannerState = `${st.ok}:${banner.hidden}`;
+    if (window.klick.debug && window.__lastBannerState !== staticBannerState) {
+      window.__lastBannerState = staticBannerState;
+      window.klick.debug(`banner ok=${st.ok} hidden=${banner.hidden} display=${getComputedStyle(banner).display}`);
+    }
   };
   applyHook(await window.klick.hookStatus());
   window.klick.onHookStatus(applyHook);
@@ -293,6 +315,12 @@ async function boot() {
     cfg = next;
     applyToControls();
   });
+
+  if (window.klick.debug) window.klick.debug('settings booted');
+  } catch (err) {
+    if (window.klick.debug) window.klick.debug('boot error: ' + (err && err.message));
+    console.error('[klick] boot failed', err);
+  }
 }
 
 boot();

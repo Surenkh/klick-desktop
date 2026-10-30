@@ -18,8 +18,10 @@ static CGEventRef on_event(CGEventTapProxy proxy, CGEventType type, CGEventRef e
     (void)proxy; (void)user;
 
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
-        // the system disabled us (slow callback or sleep); just switch back on
+        // Timeout: re-enable and carry on. User-input: the grant may have been
+        // revoked, so only report healthy if the tap really comes back.
         if (g_tap) CGEventTapEnable(g_tap, true);
+        if (!CGEventTapIsEnabled(g_tap)) g_running = false;
         return event;
     }
     if (!g_fn) return event;
@@ -59,6 +61,10 @@ static void *tap_thread(void *arg) {
 
     CFRunLoopRun();
     return NULL;
+}
+
+bool klick_capture_is_running(void) {
+    return g_tap != NULL && g_running && CGEventTapIsEnabled(g_tap);
 }
 
 bool klick_capture_has_permission(void) {

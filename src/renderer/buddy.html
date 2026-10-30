@@ -361,10 +361,17 @@
       api.onPress((payload) => {
         if (!payload) return;
         setCount(payload.taps);
+        if (api.debug) api.debug(`buddy-pill taps=${count.textContent}`);
         if (payload.milestone) party(payload.milestone);
       });
     }
-    if (api.onStats) api.onStats((stats) => setCount(stats && stats.taps));
+    if (api.onStats) api.onStats((stats) => {
+      setCount(stats && stats.taps);
+      if (api.debug && window.__lastPill !== count.textContent) {
+        window.__lastPill = count.textContent;
+        api.debug(`buddy-stats taps=${count.textContent}`);
+      }
+    });
     if (api.onSettings) {
       api.onSettings((settings) => {
         pill.hidden = settings && settings.showTapCounter === false;

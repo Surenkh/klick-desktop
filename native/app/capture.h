@@ -10,6 +10,7 @@ typedef void (*klick_key_fn)(uint16_t keycode, bool down, uint64_t host_time);
 bool klick_capture_start(klick_key_fn fn);
 void klick_capture_stop(void);
 void klick_capture_recover(void);      // after wake / tap disabled
+bool klick_capture_is_running(void);
 bool klick_capture_has_permission(void);
 
 #endif

@@ -14,6 +14,15 @@
     entry.resolve(value);
   };
 
+  window.addEventListener('error', (e) => {
+    try {
+      window.webkit.messageHandlers.klick.postMessage({
+        id: 'err' + Date.now(), method: 'jslog',
+        args: { message: `ERROR ${e.message} @ ${e.filename}:${e.lineno}` }
+      });
+    } catch (_) {}
+  });
+
   window.__klickEvent = (name, payload) => {
     for (const fn of listeners[name] || []) {
       try { fn(payload); } catch (err) { console.warn('[klick] listener', name, err); }
@@ -43,6 +52,12 @@
     };
   };
 
+  try {
+    window.webkit.messageHandlers.klick.postMessage({
+      id: 'ready', method: 'jslog', args: { message: 'bridge ready' }
+    });
+  } catch (_) {}
+
   window.klick = {
     getSettings: () => call('getSettings'),
     setSettings: (patch) => call('setSettings', { patch }),
@@ -70,6 +85,7 @@
     onHookStatus: on('hookStatus'),
     onStats: on('stats'),
     onOnboarding: on('onboarding'),
+    debug: (message) => call('jslog', { message: String(message) }),
     slap: () => call('slap'),
     buddyMove: (dx, dy) => call('buddyMove', { dx, dy }),
     buddyEnd: () => call('buddyEnd'),
