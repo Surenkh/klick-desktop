@@ -1,7 +1,7 @@
 ## Klick 0.4.0 — native, 7 MB, ~2 ms
 
-Klick is no longer an Electron app. It is a native macOS app: AppKit, CoreAudio and a
-listen-only `CGEventTap`, with the settings UI in `WKWebView`.
+Klick is a native macOS app: AppKit, CoreAudio and a listen-only `CGEventTap`, with
+the settings UI in `WKWebView`.
 
 ### Install
 
@@ -24,7 +24,7 @@ Privacy & Security → Open Anyway**, then flip **Input Monitoring** on.
 
 ### What's new
 
-- **Native shell** — menu bar item, settings window, no Chromium, no Node.
+- **Native shell** — menu bar item and settings window, built on AppKit and WebKit.
 - **Kiki is back** — floating panel above other apps, bounces on every key, draggable
   (position remembered), click to slap (+10 XP).
 - **Agents** — unix socket + `Klick --hook` CLI + recorded done/error cues; Claude Code

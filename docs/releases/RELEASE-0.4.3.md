@@ -1,6 +1,6 @@
 ## Klick 0.4.3
 
-Native macOS, 7 MB, no Electron. This release is the polish pass on top of 0.4.0.
+Native macOS, 7 MB. This release is the polish pass on top of 0.4.0.
 
 ### Install
 
