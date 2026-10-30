@@ -292,5 +292,41 @@
         clearTimeout(sleepTimer); clearTimeout(pressTimer);
       });
     </script>
-  </body>
+  
+  <script>
+  // klick-drag: drag to move the panel, tap to slap (+10 XP)
+  (function () {
+    const host = document.getElementById('float') || document.body;
+    let dragging = false, moved = 0, lastX = 0, lastY = 0;
+    host.style.cursor = 'grab';
+    host.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true; moved = 0; lastX = e.screenX; lastY = e.screenY;
+      try { host.setPointerCapture(e.pointerId); } catch (_) {}
+      host.style.cursor = 'grabbing';
+    });
+    host.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.screenX - lastX, dy = e.screenY - lastY;
+      if (!dx && !dy) return;
+      moved += Math.abs(dx) + Math.abs(dy);
+      lastX = e.screenX; lastY = e.screenY;
+      if (window.klick && window.klick.buddyMove) window.klick.buddyMove(dx, dy);
+    });
+    const end = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      host.style.cursor = 'grab';
+      try { host.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (moved < 6) {
+        if (window.klick && window.klick.slap) window.klick.slap();
+      } else if (window.klick && window.klick.buddyEnd) {
+        window.klick.buddyEnd();
+      }
+    };
+    host.addEventListener('pointerup', end);
+    host.addEventListener('pointercancel', end);
+  })();
+  </script>
+</body>
 </html>

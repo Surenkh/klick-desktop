@@ -75,7 +75,13 @@ static _Atomic uint32_t g_ring_head = 0;
 static _Atomic uint32_t g_ring_tail = 0;
 
 static _Atomic int g_reconfigure_needed = 0;
+static Take g_cues[2];                      // 0 = done, 1 = error
 static double g_latency_ms = 0;
+static OSStatus g_init_status = -1;
+static OSStatus g_start_status = -1;
+static volatile bool g_running = false;
+static volatile unsigned long g_render_count = 0;
+static volatile unsigned long g_voice_count = 0;
 static mach_timebase_info_data_t g_timebase;
 
 static pthread_mutex_t g_reload_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -210,12 +216,17 @@ static UInt32 set_device_buffer(UInt32 frames) {
 // ------------------------------------------------------------ render callback
 
 static void start_voice(const Trigger *t, uint64_t now) {
-    Pack *pack = &g_packs[atomic_load(&g_pack_active)];
-    RoleSamples *role = &pack->roles[t->role];
-    if (role->count == 0) return;
-
-    int take = arc4random_uniform((uint32_t)role->count);
-    Take *sample = &role->takes[take];
+    Take *sample = NULL;
+    if (t->role >= 200) {
+        int which = t->role - 200;
+        if (which > 1 || !g_cues[which].data) return;
+        sample = &g_cues[which];
+    } else {
+        Pack *pack = &g_packs[atomic_load(&g_pack_active)];
+        RoleSamples *role = &pack->roles[t->role];
+        if (role->count == 0) return;
+        sample = &role->takes[arc4random_uniform((uint32_t)role->count)];
+    }
 
     for (int i = 0; i < MAX_VOICES; i++) {
         if (g_voices[i].active) continue;
@@ -230,6 +241,7 @@ static void start_voice(const Trigger *t, uint64_t now) {
         v->gl = cosf(angle) * t->gain * 1.4142f;
         v->gr = sinf(angle) * t->gain * 1.4142f;
         v->active = true;
+        g_voice_count++;
 
         if (now > t->ts && g_timebase.denom) {
             uint64_t delta = now - t->ts;
@@ -240,17 +252,8 @@ static void start_voice(const Trigger *t, uint64_t now) {
     }
 }
 
-static OSStatus render(void *ref, AudioUnitRenderActionFlags *flags,
-                       const AudioTimeStamp *ts, UInt32 bus, UInt32 frames,
-                       AudioBufferList *io) {
-    (void)ref; (void)flags; (void)ts; (void)bus;
-
-    float *left = (float *)io->mBuffers[0].mData;
-    float *right = io->mNumberBuffers > 1 ? (float *)io->mBuffers[1].mData : left;
-
-    memset(left, 0, frames * sizeof(float));
-    if (io->mNumberBuffers > 1) memset(right, 0, frames * sizeof(float));
-
+// The mixing loop, shared by the realtime callback and the offline test hook.
+static void mix_slice(float *left, float *right, uint32_t frames) {
     uint32_t head = atomic_load_explicit(&g_ring_head, memory_order_acquire);
     uint32_t tail = atomic_load(&g_ring_tail);
     uint64_t now = mach_absolute_time();
@@ -270,7 +273,7 @@ static OSStatus render(void *ref, AudioUnitRenderActionFlags *flags,
             float frac = (float)(v->pos - idx);
             float s = v->data[idx] * (1.0f - frac) + v->data[idx + 1] * frac;
             left[f] += s * v->gl;
-            if (io->mNumberBuffers > 1) right[f] += s * v->gr;
+            if (right) right[f] += s * v->gr;
             v->pos += v->inc;
         }
     }
@@ -278,12 +281,40 @@ static OSStatus render(void *ref, AudioUnitRenderActionFlags *flags,
     for (UInt32 f = 0; f < frames; f++) {
         if (left[f] > 1.0f) left[f] = 1.0f;
         if (left[f] < -1.0f) left[f] = -1.0f;
-        if (io->mNumberBuffers > 1) {
+        if (right) {
             if (right[f] > 1.0f) right[f] = 1.0f;
             if (right[f] < -1.0f) right[f] = -1.0f;
         }
     }
+}
+
+static OSStatus render(void *ref, AudioUnitRenderActionFlags *flags,
+                       const AudioTimeStamp *ts, UInt32 bus, UInt32 frames,
+                       AudioBufferList *io) {
+    (void)ref; (void)flags; (void)ts; (void)bus;
+    g_render_count++;
+
+    float *left = (float *)io->mBuffers[0].mData;
+    float *right = io->mNumberBuffers > 1 ? (float *)io->mBuffers[1].mData : NULL;
+
+    memset(left, 0, frames * sizeof(float));
+    if (right) memset(right, 0, frames * sizeof(float));
+    mix_slice(left, right, frames);
     return noErr;
+}
+
+// Offline hook for the smoke tests: renders into interleaved stereo.
+void audio_test_mix(float *interleaved, uint32_t frames) {
+    float *left = calloc(frames, sizeof(float));
+    float *right = calloc(frames, sizeof(float));
+    if (!left || !right) { free(left); free(right); return; }
+    mix_slice(left, right, frames);
+    for (uint32_t f = 0; f < frames; f++) {
+        interleaved[f * 2 + 0] = left[f];
+        interleaved[f * 2 + 1] = right[f];
+    }
+    free(left);
+    free(right);
 }
 
 // ---------------------------------------------------------------- device watch
@@ -331,12 +362,16 @@ static bool build_unit(void) {
     AudioUnitSetProperty(g_unit, kAudioUnitProperty_SetRenderCallback,
                          kAudioUnitScope_Input, 0, &cb, sizeof(cb));
 
-    if (AudioUnitInitialize(g_unit) != noErr) { AudioComponentInstanceDispose(g_unit); g_unit = NULL; return false; }
-    if (AudioOutputUnitStart(g_unit) != noErr) { AudioComponentInstanceDispose(g_unit); g_unit = NULL; return false; }
+    g_init_status = AudioUnitInitialize(g_unit);
+    if (g_init_status != noErr) { AudioComponentInstanceDispose(g_unit); g_unit = NULL; return false; }
+    g_start_status = AudioOutputUnitStart(g_unit);
+    if (g_start_status != noErr) { AudioComponentInstanceDispose(g_unit); g_unit = NULL; return false; }
+    g_running = true;
     return true;
 }
 
 static void teardown_unit(void) {
+    g_running = false;
     if (!g_unit) return;
     AudioOutputUnitStop(g_unit);
     AudioUnitUninitialize(g_unit);
@@ -441,3 +476,22 @@ void audio_reload_for_device(void) {
 bool audio_take_reconfigure_flag(void) {
     return atomic_exchange(&g_reconfigure_needed, 0) != 0;
 }
+
+bool audio_is_running(void) { return g_running; }
+
+bool audio_load_cues(const char *dir) {
+    char path[1024];
+    snprintf(path, sizeof path, "%s/done.wav", dir);
+    g_cues[0] = load_take(path);
+    snprintf(path, sizeof path, "%s/error.wav", dir);
+    g_cues[1] = load_take(path);
+    return g_cues[0].data != NULL;
+}
+
+void audio_trigger_cue(int which, float gain) {
+    audio_trigger(200 + which, 0.0f, gain, 1.0f, mach_absolute_time());
+}
+OSStatus audio_init_status(void) { return g_init_status; }
+OSStatus audio_start_status(void) { return g_start_status; }
+unsigned long audio_render_count(void) { return g_render_count; }
+unsigned long audio_voice_count(void) { return g_voice_count; }

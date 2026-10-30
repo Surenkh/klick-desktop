@@ -227,7 +227,8 @@ async function boot() {
   try {
     const info = await window.klick.appInfo();
     $('version').textContent = `Klick ${info.version}`;
-    $('runtime').textContent = `Electron ${info.electron} · Chromium ${info.chrome} · Node ${info.node}`;
+    $('runtime').textContent = info.runtime
+      || `Electron ${info.electron} · Chromium ${info.chrome} · Node ${info.node}`;
   } catch (err) {
     console.warn('[klick] app info failed', err);
   }

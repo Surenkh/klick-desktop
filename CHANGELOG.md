@@ -4,6 +4,27 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.4.0 — 2026-10-30
+
+**Klick is now a native macOS app. No Electron, no Chromium, no Node.**
+
+- **7 MB** instead of 265 MB; the DMG is 7 MB instead of 127 MB.
+- **~2–4 ms key-to-ear latency**: the CGEventTap thread pushes into a lock-free
+  ring buffer that the CoreAudio render callback consumes, with a 64-frame device
+  buffer. Measured tap→render: 0.4–1.0 ms.
+- Objective-C shell: `NSStatusItem` menu bar, `NSPanel` + `WKWebView` for Kiki,
+  lazy `WKWebView` Settings that is torn down when closed.
+- Kiki returns: floats above other apps, bounces on every key, drag to move
+  (position saved), click to slap (+10 XP).
+- Agents are back: unix-socket listener, `Klick --hook` CLI, recorded done/error
+  cues, Claude Code hooks wired from the Agents tab. Cursor/Codex are next.
+- Sample-rate matching via ExtAudioFile; output-device changes rebuild the
+  AudioUnit and re-convert every pack (AirPods/USB DAC safe).
+- Sleep/wake recovery, tap re-enable on timeout, `SMAppService` launch at login.
+- Signed with a stable local identity, so Input Monitoring survives rebuilds.
+- Single-arch builds, staging bundles deleted and unregistered, `.metadata_never_index`
+  in every build directory — macOS can only ever see one Klick.
+
 ## 0.3.1 — 2026-10-30
 
 - **Onboarding actually dismisses.** `Start typing`, `Not now` and Escape close the screen

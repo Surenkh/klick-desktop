@@ -10,39 +10,31 @@ permissions:
   contents: read
 
 jobs:
-  macos:
+  native:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
+      - name: Native smoke tests (keymap, packs, mixer, cues)
+        run: sh scripts/test-native.sh
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Build both DMGs (arm64 + x86_64)
+        run: sh scripts/package-native.sh
 
-      - name: Build native capture addon
+      - name: Verify architectures and size
         run: |
-          set -euo pipefail
-          NODE_INC="$(cd "$(dirname "$(command -v node)")/../include/node" && pwd)"
-          clang -shared -fPIC -O2 -arch arm64 -arch x86_64 \
-            -mmacosx-version-min=14.0 -I"$NODE_INC" -undefined dynamic_lookup \
-            -framework ApplicationServices -framework CoreFoundation \
-            -o native/klick-capture.node native/capture.c
-          file native/klick-capture.node
-
-      - name: Test
-        run: npm test
-
-      - name: Build installers (arm64 + x64)
-        run: |
-          npx electron-builder --mac dmg --arm64 --publish never
-          npx electron-builder --mac dmg --x64 --publish never
+          set -eu
+          for arch in arm64 x64; do
+            mnt="$(mktemp -d)"
+            hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "dist/Klick-0.4.0-$arch.dmg" >/dev/null
+            file "$mnt/Klick.app/Contents/MacOS/Klick"
+            hdiutil detach "$mnt" >/dev/null
+            rmdir "$mnt"
+          done
+          du -h dist/*.dmg
 
       - uses: actions/upload-artifact@v4
         with:
-          name: klick-dmg
+          name: klick-native-dmg
           path: dist/*.dmg
           if-no-files-found: error

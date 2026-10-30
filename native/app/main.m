@@ -9,6 +9,10 @@
 #include <mach/mach_time.h>
 #include <math.h>
 #include <stdatomic.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 #include "audio.h"
 #include "capture.h"
@@ -17,51 +21,7 @@ static const char *kBundleID = "app.klick.Klick";
 
 // ---------------------------------------------------------------- key mapping
 
-typedef struct { int role; float pan; } KeyMap;
-
-static KeyMap map_keycode(uint16_t code) {
-    KeyMap m = { KLICK_ROLE_KEYS, 0.0f };
-
-    if (code == 49) { m.role = KLICK_ROLE_SPACE; return m; }
-    if (code == 36 || code == 76) { m.role = KLICK_ROLE_ENTER; return m; }
-    if (code == 51 || code == 117) { m.role = KLICK_ROLE_DELETE; return m; }
-    if (code >= 54 && code <= 63) { m.role = KLICK_ROLE_MODIFIER; return m; }
-
-    // QWERTY columns, same numbers as the JS table
-    static const int row1[] = {12, 13, 14, 15, 17, 16, 32, 34, 31, 35};  // q w e r t y u i o p
-    static const int row2[] = {0, 1, 2, 3, 5, 4, 38, 40, 37};            // a s d f g h j k l
-    static const int row3[] = {6, 7, 8, 9, 11, 45, 46};                  // z x c v b n m
-    static const int digits[] = {18, 19, 20, 21, 23, 22, 26, 28, 25, 29}; // 1..0
-
-    float column = -1;
-    for (int i = 0; i < 10; i++) if (row1[i] == code) column = 0.25f + i;
-    if (column < 0) for (int i = 0; i < 9; i++) if (row2[i] == code) column = 0.4f + i;
-    if (column < 0) for (int i = 0; i < 7; i++) if (row3[i] == code) column = 0.7f + i;
-    if (column < 0) for (int i = 0; i < 10; i++) if (digits[i] == code) column = 0.5f + i;
-
-    switch (code) {
-        case 50: column = 0; break;
-        case 27: column = 10; break;
-        case 24: column = 11; break;
-        case 33: column = 11.3f; break;
-        case 30: column = 12.3f; break;
-        case 42: column = 13; break;
-        case 41: column = 10; break;
-        case 39: column = 11.3f; break;
-        case 43: column = 8.3f; break;
-        case 47: column = 9.3f; break;
-        case 44: column = 10.3f; break;
-        default: break;
-    }
-
-    if (column >= 0) {
-        float pan = (column / 9.0f - 0.5f) * 1.3f;
-        if (pan < -0.65f) pan = -0.65f;
-        if (pan > 0.65f) pan = 0.65f;
-        m.pan = pan;
-    }
-    return m;
-}
+#include "keymap.h"
 
 // ------------------------------------------------------------------- app
 
@@ -76,9 +36,47 @@ static KeyMap map_keycode(uint16_t code) {
 @property (nonatomic, assign) int activePack;
 @property (nonatomic, assign) BOOL captureOK;
 @property (nonatomic, assign) BOOL recordingTap;
+@property (nonatomic, strong) NSPanel *buddyPanel;
+@property (nonatomic, strong) WKWebView *buddyWeb;
+@property (nonatomic, assign) int agentSocket;
+
+- (void)buddyPulse;
+- (void)buddyMood:(NSString *)mood;
 @end
 
 static AppDelegate *gApp = nil;
+
+@interface AppDelegate (Agents)
+- (void)handleAgentLine:(NSString *)line;
+@end
+
+static void *agent_listener_thread(void *context) {
+    NSString *path = (__bridge_transfer NSString *)context;
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return NULL;
+    unlink(path.UTF8String);
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, path.UTF8String, sizeof(addr.sun_path) - 1);
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) { close(fd); return NULL; }
+    if (listen(fd, 8) != 0) { close(fd); return NULL; }
+
+    for (;;) {
+        int client = accept(fd, NULL, NULL);
+        if (client < 0) continue;
+        char buffer[1024] = {0};
+        ssize_t n = read(client, buffer, sizeof(buffer) - 1);
+        close(client);
+        if (n <= 0) continue;
+        NSString *line = [NSString stringWithUTF8String:buffer];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (gApp && line) [gApp handleAgentLine:line];
+        });
+    }
+    return NULL;
+}
 
 typedef struct { atomic_uint taps; atomic_uint xp; } Counters;
 static Counters app_counters;
@@ -96,7 +94,7 @@ static void on_key(uint16_t code, bool down, uint64_t host_time) {
     float gain = (float)atomic_load(&g_volume_milli) / 1000.0f;
     if (gain <= 0.001f) return;
 
-    KeyMap m = map_keycode(code);
+    KeyMap m = klick_map_keycode(code);
     float rate = 0.985f + ((float)arc4random_uniform(1000) / 1000.0f) * 0.03f;
 
     if (down) {
@@ -104,14 +102,20 @@ static void on_key(uint16_t code, bool down, uint64_t host_time) {
         audio_trigger(m.role, m.pan, gain, rate, host_time);
         atomic_fetch_add(&app_counters.taps, 1);
         atomic_fetch_add(&app_counters.xp, 1);
+        AppDelegate *app = gApp;
+        if (app) dispatch_async(dispatch_get_main_queue(), ^{ [app buddyPulse]; });
     } else if (atomic_load(&g_release) && m.role != KLICK_ROLE_MODIFIER) {
         audio_trigger(KLICK_ROLE_RELEASE, m.pan, gain * 0.7f, rate, host_time);
     }
 }
 
+static double num(id value, double fallback) {
+    return [value isKindOfClass:[NSNumber class]] ? [value doubleValue] : fallback;
+}
+
 static void mirror_settings(NSDictionary *settings) {
     atomic_store(&g_enabled, [settings[@"enabled"] boolValue]);
-    atomic_store(&g_volume_milli, (int)lround([settings[@"volume"] doubleValue] * 1000.0));
+    atomic_store(&g_volume_milli, (int)lround(num(settings[@"volume"], 0.7) * 1000.0));
     atomic_store(&g_release, [settings[@"releaseSounds"] boolValue]);
 }
 
@@ -127,10 +131,40 @@ static void mirror_settings(NSDictionary *settings) {
 
     self.packsDir = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"assets/packs"];
 
-    audio_init();
+    BOOL audioOK = audio_init();
+    [self log:@"audio init ok=%d initStatus=%d startStatus=%d running=%d rate=%.0f",
+        audioOK, (int)audio_init_status(), (int)audio_start_status(), audio_is_running(), audio_device_rate()];
     [self reloadPacks];
 
     [self startCapture];
+
+    NSString *cuesDir = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"assets/cues"];
+    audio_load_cues(cuesDir.UTF8String);
+    [self log:@"cues loaded: %d", audio_load_cues(cuesDir.UTF8String)];
+
+    if ([self.settings[@"buddy"] boolValue]) {
+        @try {
+            [self showBuddy];
+        } @catch (NSException *e) {
+            NSLog(@"BUDDY EXCEPTION: %@ — %@", e.name, e.reason);
+            [self log:@"buddy failed: %@ — %@", e.name, e.reason];
+        }
+    }
+
+    @try {
+    NSString *sock = [self supportPath:@"agents.sock"];
+    pthread_t agentThread;
+    const char *sockCopy = strdup(sock.UTF8String);
+    if (pthread_create(&agentThread, NULL, agent_listener_thread,
+                       (void *)CFBridgingRetain([NSString stringWithUTF8String:sockCopy])) == 0) {
+        pthread_detach(agentThread);
+        [self log:@"agent socket listening (%@)", sock];
+    }
+    free((void *)sockCopy);
+    [self writeHookShim];
+    } @catch (NSException *e) {
+        NSLog(@"AGENT EXCEPTION: %@ — %@", e.name, e.reason);
+    }
 
     [[NSWorkspace sharedWorkspace].notificationCenter addObserver:self
         selector:@selector(didWake:) name:NSWorkspaceDidWakeNotification object:nil];
@@ -144,7 +178,18 @@ static void mirror_settings(NSDictionary *settings) {
         [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],
         audio_device_rate(), audio_pack_count()];
 
-    BOOL forceSettings = [[[NSProcessInfo processInfo] arguments] containsObject:@"--settings"];
+    NSArray *args = [[NSProcessInfo processInfo] arguments];
+    if ([args containsObject:@"--selftest"]) {
+        [self log:@"selftest: triggering 3 key sounds"];
+        for (int i = 0; i < 3; i++) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((0.5 + i * 0.25) * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                audio_trigger(KLICK_ROLE_KEYS, 0, 0.7f, 1.0f, mach_absolute_time());
+            });
+        }
+    }
+
+    BOOL forceSettings = [args containsObject:@"--settings"];
     if (forceSettings || ![self.settings[@"onboarded"] boolValue]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [self openSettings:nil]; });
@@ -179,6 +224,32 @@ static void mirror_settings(NSDictionary *settings) {
     }
     [self flushCountersIfNeeded];
     [self pushStatusToWeb];
+
+    static unsigned long lastVoices = 0;
+    unsigned long voices = audio_voice_count();
+    if (voices != lastVoices) {
+        lastVoices = voices;
+        [self log:@"audio voices started: %lu (render slices %lu, latency %.2f ms)",
+            voices, audio_render_count(), audio_latency_ms()];
+    }
+
+    static BOOL loggedRender = NO;
+    if (!loggedRender && audio_render_count() > 0) {
+        loggedRender = YES;
+        [self log:@"audio render callback running (%lu slices)", audio_render_count()];
+    }
+
+    // permission can be granted while the app is open: retry every 2 seconds
+    static time_t lastCaptureTry = 0;
+    time_t now = time(NULL);
+    if (!self.captureOK && now - lastCaptureTry >= 2) {
+        lastCaptureTry = now;
+        if (klick_capture_has_permission()) {
+            self.captureOK = klick_capture_start(on_key);
+            [self log:@"capture %@ after permission change", self.captureOK ? @"started" : @"failed"];
+            [self pushStatusToWeb];
+        }
+    }
 
     static BOOL loggedLatency = NO;
     if (!loggedLatency && audio_latency_ms() > 0) {
@@ -241,6 +312,10 @@ static void mirror_settings(NSDictionary *settings) {
         @"xp": @0
     } mutableCopy];
     if (stored) [defaults addEntriesFromDictionary:stored];
+    // JSON nulls from older builds must never reach a numeric read
+    for (NSString *key in [defaults allKeys]) {
+        if ([defaults[key] isKindOfClass:[NSNull class]]) [defaults removeObjectForKey:key];
+    }
     self.settings = defaults;
     mirror_settings(self.settings);
     atomic_store(&app_counters.taps, [self.settings[@"taps"] unsignedIntValue]);
@@ -349,6 +424,10 @@ static void mirror_settings(NSDictionary *settings) {
     login.state = [self launchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [menu addItem:login];
 
+    NSMenuItem *kiki = [[NSMenuItem alloc] initWithTitle:@"Kiki on the desktop" action:@selector(toggleBuddy:) keyEquivalent:@""];
+    kiki.state = [self.settings[@"buddy"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff;
+    [menu addItem:kiki];
+
     NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…" action:@selector(openSettings:) keyEquivalent:@","];
     [menu addItem:settingsItem];
 
@@ -450,6 +529,108 @@ static void mirror_settings(NSDictionary *settings) {
     [NSApp activateIgnoringOtherApps:YES];
 }
 
+- (void)writeHookShim {
+    NSString *binDir = [[self supportPath:@"bin"] stringByStandardizingPath];
+    [[NSFileManager defaultManager] createDirectoryAtPath:binDir withIntermediateDirectories:YES attributes:nil error:nil];
+    NSString *shim = [binDir stringByAppendingPathComponent:@"klick-hook"];
+    NSString *body = [NSString stringWithFormat:@"#!/bin/sh\nexec \"%@\" --hook \"$@\"\n",
+                      [NSBundle mainBundle].executablePath];
+    [body writeToFile:shim atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    [[NSFileManager defaultManager] setAttributes:@{NSFilePosixPermissions: @0755}
+                                     ofItemAtPath:shim error:nil];
+}
+
+- (void)handleAgentLine:(NSString *)line {
+    NSString *event = @"done";
+    if ([line rangeOfString:@"needs-you"].location != NSNotFound) event = @"needs-you";
+    else if ([line rangeOfString:@"error"].location != NSNotFound) event = @"error";
+
+    float gain = fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7));
+    if ([event isEqualToString:@"error"]) {
+        audio_trigger_cue(1, gain);
+        [self buddyMood:@"error"];
+    } else if ([event isEqualToString:@"needs-you"]) {
+        audio_trigger(KLICK_ROLE_KEYS, -0.2f, gain, 1.0f, mach_absolute_time());
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.12 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{ audio_trigger(KLICK_ROLE_KEYS, 0.2f, gain, 1.335f, mach_absolute_time()); });
+        [self buddyMood:@"sweat"];
+    } else {
+        audio_trigger_cue(0, gain);
+        [self buddyMood:@"happy"];
+    }
+    [self log:@"agent event: %@", event];
+}
+
+- (void)showBuddy {
+    if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
+
+    NSRect visible = [NSScreen mainScreen].visibleFrame;
+    CGFloat width = 140, height = 140;
+    CGFloat x = num(self.settings[@"buddyX"], 0);
+    CGFloat y = num(self.settings[@"buddyY"], 0);
+    if (x <= 0 && y <= 0) {
+        x = NSMaxX(visible) - width - 36;
+        y = NSMinY(visible) + 56;
+    }
+
+    NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(x, y, width, height)
+        styleMask:(NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel)
+        backing:NSBackingStoreBuffered defer:NO];
+    panel.opaque = NO;
+    panel.backgroundColor = [NSColor clearColor];
+    panel.hasShadow = NO;
+    panel.level = NSFloatingWindowLevel;
+    panel.hidesOnDeactivate = NO;
+    panel.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary;
+    panel.ignoresMouseEvents = NO;
+
+    WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    NSString *bridge = [NSString stringWithContentsOfFile:[[NSBundle mainBundle].resourcePath
+        stringByAppendingPathComponent:@"web/bridge.js"] encoding:NSUTF8StringEncoding error:nil];
+    [config.userContentController addUserScript:[[WKUserScript alloc] initWithSource:bridge
+        injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES]];
+    [config.userContentController addScriptMessageHandler:self name:@"klick"];
+
+    WKWebView *web = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, width, height) configuration:config];
+    web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    @try { [web setValue:@NO forKey:@"drawsBackground"]; } @catch (NSException *e) {}
+
+    panel.contentView = web;
+    NSString *root = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"web"];
+    NSURL *url = [NSURL fileURLWithPath:[root stringByAppendingPathComponent:@"buddy.html"]];
+    [web loadFileURL:url allowingReadAccessToURL:[NSURL fileURLWithPath:root]];
+    [panel orderFrontRegardless];
+
+    self.buddyPanel = panel;
+    self.buddyWeb = web;
+    [self log:@"buddy panel shown at %.0f,%.0f", x, y];
+}
+
+- (void)hideBuddy {
+    [self.buddyPanel orderOut:nil];
+    self.buddyPanel = nil;
+    self.buddyWeb = nil;
+    [self log:@"buddy panel hidden"];
+}
+
+- (void)buddyPulse {
+    [self.buddyWeb evaluateJavaScript:@"window.__klickEvent && window.__klickEvent('press')" completionHandler:nil];
+}
+
+- (void)buddyMood:(NSString *)mood {
+    NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('mood', %@)", [self jsonQuote:mood]];
+    [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+}
+
+- (void)toggleBuddy:(NSMenuItem *)item {
+    BOOL on = ![self.settings[@"buddy"] boolValue];
+    self.settings[@"buddy"] = @(on);
+    if (on) [self showBuddy]; else [self hideBuddy];
+    [self saveSettings];
+    [self rebuildMenu];
+    [self pushSettingsToWeb];
+}
+
 - (void)windowWillClose:(NSNotification *)note {
     if (note.object == self.settingsWindow) {
         // lazy: drop the whole web view so idle RAM stays small
@@ -486,9 +667,14 @@ static void mirror_settings(NSDictionary *settings) {
 - (id)handleMethod:(NSString *)method args:(NSDictionary *)args {
     if ([method isEqualToString:@"getSettings"]) return self.settings;
     if ([method isEqualToString:@"appInfo"]) {
+        NSString *arch = @"arm64";
+#if defined(__x86_64__)
+        arch = @"x86_64";
+#endif
         return @{ @"version": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"0.4.0",
+                  @"runtime": [NSString stringWithFormat:@"Native macOS · CoreAudio · WKWebView (%@)", arch],
                   @"electron": @"—", @"chrome": @"—", @"node": @"—",
-                  @"platform": @"darwin", @"arch": @"arm64" };
+                  @"platform": @"darwin", @"arch": arch };
     }
     if ([method isEqualToString:@"captureInfo"]) {
         uint64_t last = atomic_load(&g_last_key_mach);
@@ -518,12 +704,29 @@ static void mirror_settings(NSDictionary *settings) {
         return @{ @"taps": @(atomic_load(&app_counters.taps)), @"xp": @(atomic_load(&app_counters.xp)),
                   @"slaps": @0, @"level": @1, @"hat": [NSNull null], @"day": @"" };
     }
-    if ([method isEqualToString:@"agents"]) return @{};
+    if ([method isEqualToString:@"agents"]) {
+        NSString *claude = [@"~/.claude/settings.json" stringByExpandingTildeInPath];
+        NSData *data = [NSData dataWithContentsOfFile:claude];
+        BOOL installed = NO;
+        if (data) {
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            installed = json[@"hooks"] != nil;
+        }
+        return @{ @"claude": @{ @"installed": @(installed) } };
+    }
+    if ([method isEqualToString:@"connectAgent"] || [method isEqualToString:@"removeAgent"]) {
+        NSString *agent = args[@"agent"] ?: @"";
+        if (![agent isEqualToString:@"claude"]) {
+            return @{ @"ok": @NO, @"error": @"Cursor and Codex hooks arrive in the next build" };
+        }
+        BOOL connect = [method isEqualToString:@"connectAgent"];
+        return [self updateClaudeHooks:connect];
+    }
     if ([method isEqualToString:@"cueSamples"]) return @{ @"done": [NSNull null], @"error": [NSNull null] };
     if ([method isEqualToString:@"onboarded"]) { self.settings[@"onboarded"] = @YES; [self saveSettings]; return @YES; }
     if ([method isEqualToString:@"demoTap"]) {
         [self log:@"demo tap"];
-        audio_trigger(KLICK_ROLE_KEYS, 0, [self.settings[@"volume"] floatValue], 1.0f, mach_absolute_time());
+        audio_trigger(KLICK_ROLE_KEYS, 0, (float)num(self.settings[@"volume"], 0.7), 1.0f, mach_absolute_time());
         atomic_fetch_add(&app_counters.taps, 1);
         return @YES;
     }
@@ -539,6 +742,33 @@ static void mirror_settings(NSDictionary *settings) {
             [self rebuildMenu];
         }
         return self.settings;
+    }
+    if ([method isEqualToString:@"slap"]) {
+        float gain = fmaxf(0.35f, (float)num(self.settings[@"volume"], 0.7));
+        audio_trigger(KLICK_ROLE_KEYS, 0.0f, gain, 0.80f, mach_absolute_time());
+        atomic_fetch_add(&app_counters.xp, 10);
+        atomic_fetch_add(&app_counters.taps, 1);
+        [self buddyMood:@"party"];
+        [self log:@"kiki slapped (+10 xp)"];
+        [self saveSettings];
+        return @YES;
+    }
+    if ([method isEqualToString:@"buddyMove"]) {
+        CGFloat dx = [args[@"dx"] doubleValue];
+        CGFloat dy = [args[@"dy"] doubleValue];
+        NSRect frame = self.buddyPanel.frame;
+        frame.origin.x += dx;
+        frame.origin.y -= dy;
+        [self.buddyPanel setFrameOrigin:frame.origin];
+        return @YES;
+    }
+    if ([method isEqualToString:@"buddyEnd"]) {
+        NSPoint origin = self.buddyPanel.frame.origin;
+        self.settings[@"buddyX"] = @(origin.x);
+        self.settings[@"buddyY"] = @(origin.y);
+        [self saveSettings];
+        [self log:@"kiki moved to %.0f,%.0f", origin.x, origin.y];
+        return @YES;
     }
     if ([method isEqualToString:@"openPrivacy"]) {
         [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:
@@ -577,6 +807,38 @@ static void mirror_settings(NSDictionary *settings) {
     return result;
 }
 
+- (NSDictionary *)updateClaudeHooks:(BOOL)connect {
+    NSString *path = [@"~/.claude/settings.json" stringByExpandingTildeInPath];
+    [[NSFileManager defaultManager] createDirectoryAtPath:[path stringByDeletingLastPathComponent]
+                              withIntermediateDirectories:YES attributes:nil error:nil];
+
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    NSMutableDictionary *json = data ? [[NSJSONSerialization JSONObjectWithData:data options:0 error:nil] mutableCopy]
+                                     : [NSMutableDictionary dictionary];
+    if (![json isKindOfClass:[NSMutableDictionary class]]) json = [NSMutableDictionary dictionary];
+
+    NSString *shim = [[self supportPath:@"bin"] stringByAppendingPathComponent:@"klick-hook"];
+    NSString *command = [NSString stringWithFormat:@"%@ claude done", shim];
+
+    if (connect) {
+        NSMutableDictionary *hooks = [json[@"hooks"] mutableCopy] ?: [NSMutableDictionary dictionary];
+        hooks[@"Stop"] = @[ @{ @"hooks": @[ @{ @"type": @"command", @"command": command } ] } ];
+        hooks[@"Notification"] = @[ @{ @"hooks": @[ @{ @"type": @"command", @"command":
+            [NSString stringWithFormat:@"%@ claude needs-you", shim] } ] } ];
+        json[@"hooks"] = hooks;
+    } else {
+        NSMutableDictionary *hooks = [json[@"hooks"] mutableCopy];
+        [hooks removeObjectForKey:@"Stop"];
+        [hooks removeObjectForKey:@"Notification"];
+        if (hooks.count) json[@"hooks"] = hooks; else [json removeObjectForKey:@"hooks"];
+    }
+
+    NSData *out = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
+    BOOL ok = [out writeToFile:path atomically:YES];
+    [self log:@"claude hooks %@: %@", connect ? @"connected" : @"removed", ok ? @"ok" : @"failed"];
+    return @{ @"ok": @(ok) };
+}
+
 - (void)pushSettingsToWeb { [self pushEvent:@"settings" payload:self.settings]; }
 - (void)pushStatusToWeb {
     if (!self.webView) return;
@@ -595,8 +857,33 @@ static void mirror_settings(NSDictionary *settings) {
 
 @end
 
+// `Klick --hook claude done` — used by the agent shim scripts.
+static int run_hook(int argc, const char *argv[]) {
+    NSMutableString *line = [NSMutableString string];
+    for (int i = 2; i < argc; i++) {
+        if (line.length) [line appendString:@" "];
+        [line appendString:[NSString stringWithUTF8String:argv[i]]];
+    }
+    [line appendString:@"\n"];
+
+    NSString *sock = [@"~/Library/Application Support/Klick/agents.sock" stringByExpandingTildeInPath];
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return 1;
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, sock.UTF8String, sizeof(addr.sun_path) - 1);
+
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) { close(fd); return 1; }
+    ssize_t written = write(fd, line.UTF8String, line.length);
+    close(fd);
+    return written > 0 ? 0 : 1;
+}
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
+        if (argc >= 3 && strcmp(argv[1], "--hook") == 0) return run_hook(argc, argv);
         NSApplication *app = [NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyAccessory];
         AppDelegate *delegate = [[AppDelegate alloc] init];

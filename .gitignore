@@ -16,3 +16,4 @@ tools/
 .DS_Store
 **/.DS_Store
 build/
+.signing/

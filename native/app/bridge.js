@@ -70,6 +70,9 @@
     onHookStatus: on('hookStatus'),
     onStats: on('stats'),
     onOnboarding: on('onboarding'),
+    slap: () => call('slap'),
+    buddyMove: (dx, dy) => call('buddyMove', { dx, dy }),
+    buddyEnd: () => call('buddyEnd'),
     onPlay: on('play'),
     onPress: on('press'),
     onMood: on('mood')

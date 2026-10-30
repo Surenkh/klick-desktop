@@ -1,100 +1,109 @@
 # Architecture
 
-**Current release: Klick 0.3.0** — macOS (Apple silicon + Intel).
-The capture layer is in-process, listen-only, Input Monitoring only.
+**Current release: Klick 0.4.0** — native macOS (arm64 + x86_64), no Electron, no Chromium, no Node.
 
-Klick is one Electron app with a small native helper. Everything is local: no
-server, no telemetry, no network code at all in this build.
+## Shape of the app
 
 ```
-┌──────────────────────── main process ────────────────────────┐
-│ index.js        composition root: order + wiring only         │
-│ windows.js      audio / Kiki / Settings windows, placement    │
-│ tray.js         menu bar menu                                 │
-│ ipc.js          one table of renderer → main calls            │
-│ audio-bus.js    the only path to the audio renderer           │
-│ cues.js         agent cue routing (recorded + pack notes)     │
-│ agent-server.js local socket that the agent shim writes to    │
-│ agents.js       hook install/remove, shim, backups            │
-│ packs.js        pack + cue file access                        │
-│ store.js        settings/stats, debounced persistence         │
-│ logger.js       console + capped log file                      │
-│ keyboard/                                                     │
-│   index.js      platform facade: one onKey({type,role,pan})   │
-│   mac.js        drives the in-process addon                   │
-│   win.js        uiohook adapter (Windows)                     │
-│   macos-keycodes.js  virtual keycode → role + stereo column    │
-│   uiohook-map.js     keycode → role + stereo column (Windows)  │
-└───────────────────────────────────────────────────────────────┘
-        │                                     │ IPC (small JSON)
-        ▼                                     ▼
-┌─ native/klick-capture.node (in-process) ─┐  ┌──── renderers ────┐
-│ N-API addon, listen-only CGEventTap      │  │ audio  WebAudio   │
-│ cannot modify or block events            │  │ buddy  Kiki       │
-│ uses Klick.app's own TCC identity        │  │ settings  UI      │
-└──────────────────────────────────────────┘  └───────────────────┘
+Klick.app  (~7 MB)
+├── Contents/MacOS/Klick            Objective-C + C, ~2 MB
+├── Contents/Resources/web/         settings.html, settings.js, buddy.html (WKWebView)
+├── Contents/Resources/assets/      sound packs, Kiki art, cues
+└── Contents/Resources/icon.icns
 ```
 
-## Why capture lives inside the app
+One process. Three threads that matter:
 
-| | separate helper binary | in-process addon (current) |
-| --- | --- | --- |
-| Input Monitoring identity | its own, so the app's grant does not apply — it reported "no permission" forever | the app's, so the grant works |
-| Entries in System Settings | duplicates, one per build | one |
-| Failure mode | a tap can be created without permission and silently deliver nothing | status comes from the real tap state |
-| Crash risk | separate process | shared with the app (guarded by `watch()`) |
-
-The tap is **listen-only** (`kCGEventTapOptionListenOnly`): the OS forbids it from
-modifying or blocking events, so Klick cannot delay or swallow a keystroke. That is
-also why only Input Monitoring is needed — an active tap would require Accessibility.
-
-## Data flow for one key press
-
-```
-HID report → klick-keys → "d 20" (stdout)
-  → mac.js parses → hid.js classifies (role, pan)
-  → index.js handleKey:
-        audio.key({pack, role, pan, rate, gain})   → audio-bus → renderer IPC
-        windows.toBuddy('buddy:press')             → renderer IPC
-        store.addXp(1)                             → memory only
-        pushStatsSoon()                            → coalesced 300 ms
-```
-
-Everything after classification is asynchronous. The only work in the input
-path is: one table lookup, one Map write, two tiny `webContents.send` calls.
-
-## Threading and performance budget
-
-- The helper is its own process; the main process never blocks on I/O.
-- Audio decoding happens once per pack in the renderer; playback is scheduled on
-  the WebAudio thread, so a busy main process cannot stutter a key.
-- `settings.json` writes are debounced (600 ms) and flushed on quit.
-- The stats push to Settings is coalesced (300 ms) — typing at 10 keys/s
-  produces one UI update per ~300 ms, not ten.
-- Windows are created hidden and shown on `ready-to-show`; the buddy is a
-  non-activating panel, so it never steals focus or clicks.
-- Startup order: audio window first (so the first keypress has a target), then
-  Kiki, then tray, then capture. Settings is lazy.
-
-## Failure behaviour
-
-| Failure | What happens |
+| Thread | Job |
 | --- | --- |
-| Input Monitoring denied | helper prints `access missing`, waits; granting it later starts capture with no restart; Settings shows a banner |
-| Helper missing/corrupt | capture stays off, log line, app otherwise fully usable |
-| Helper crashes | restarted after 4 s; at most a short gap in sounds |
-| Agent config invalid | that connect/remove is refused, file untouched, error shown |
-| Another instance running | the second exits; the first raises Settings |
-| Any uncaught error | logged to `<userData>/klick.log`, app keeps running |
+| main | AppKit, menu bar, windows, bridge replies |
+| capture | `CGEventTap` listens for keys (listen-only) |
+| CoreAudio | render callback mixes voices into the output buffer |
 
-## Extension points
+## The critical path (no JS, no IPC)
 
-- New sound pack: drop a folder into `assets/packs/<name>/` with
-  `{keys-1..n,space,enter,delete,modifier,release,click}` at 48 kHz mono; it
-  appears in the UI and tray.
-- New agent: add an entry to `AGENTS` in `agents.js` (config path + events) and
-  a cue mood in `cues.js`.
-- New cue sound: drop `assets/cues/<name>.wav`; `cues.play(name)` prefers the
-  file and falls back to pack notes.
-- New platform: implement `start/stop/status` in `keyboard/`, reuse everything
-  else.
+```
+key down
+  → CGEventTap callback (capture thread)
+      · CGKeyCode → role + stereo pan          (native/app/keymap.c)
+      · audio_trigger(...)                     (native/app/audio.c)
+          → lock-free SPSC ring, stdatomic, no malloc
+  → next render callback (CoreAudio thread)
+      · pops triggers, picks a take, starts a voice
+      · mixes with linear interpolation and constant-power pan
+      · hardware buffer: 64 frames (1.33 ms @ 48 kHz)
+```
+
+Everything above is C. The JavaScript UI is never involved in playing a key sound —
+which is why the measured tap→render time is 0.4–1.0 ms instead of the 45 ms the
+Electron build inherited from Chromium's audio backend.
+
+## Modules
+
+| File | Responsibility |
+| --- | --- |
+| `native/app/main.m` | AppDelegate, status item, menu, windows, JS bridge, agents, launch at login, wake handling |
+| `native/app/audio.c` | AudioUnit (DefaultOutput), pack loading, mixer, cues, device-change handling |
+| `native/app/capture.c` | listen-only `CGEventTap` on its own thread, self-healing on timeout |
+| `native/app/keymap.c` | CGKeyCode → role (keys/space/enter/delete/modifier/release) + pan |
+| `native/app/bridge.js` | re-creates the `window.klick` API over `webkit.messageHandlers` |
+| `tests/test_native.c` | keymap, pack loading, offline mixing and cue checks (23 assertions) |
+
+## Sample-rate matching
+
+Every WAV is decoded and resampled to the **current hardware rate** with
+`ExtAudioFile` when a pack loads (44.1 / 48 / 96 kHz all work), so nothing ever
+plays at the wrong pitch. When the default output device changes — speakers →
+AirPods → USB DAC — an `AudioObjectAddPropertyListener` on
+`kAudioHardwarePropertyDefaultOutputDevice` sets a flag; the main thread tears the
+unit down, rebuilds it at the new rate, re-converts every pack and restores the
+active pack. No crash, no silence, no pitch shift.
+
+## Windows and the UI
+
+- **Settings** — a `WKWebView` created the first time you open it and released when
+  you close it, so idle RAM stays flat. The same HTML/CSS/JS from the Electron era
+  runs unchanged; `bridge.js` maps `window.klick.*` onto script messages and
+  promise callbacks.
+- **Kiki** — a borderless, non-activating `NSPanel` (`opaque = NO`, clear
+  background, floating level, joins all spaces) hosting a transparent `WKWebView`.
+  Key presses are forwarded as `__klickEvent('press')`; dragging moves the panel
+  and saves `buddyX/buddyY`; a click plays a hit and awards +10 XP.
+- **Menu bar** — `NSStatusItem` with sounds on/off, volume, pack choice, Kiki
+  toggle, launch at login, Settings, Quit.
+
+## Agents
+
+A unix socket at `~/Library/Application Support/Klick/agents.sock`, a shim at
+`…/Klick/bin/klick-hook`, and `Klick --hook <agent> <event>` as the CLI. Events map
+to recorded cues (`done`, `error`) or two rising notes (`needs-you`) and drive
+Kiki's mood. Claude Code hooks are installed from the Agents tab; Cursor and Codex
+are on the roadmap.
+
+## Permissions and trust
+
+- **Input Monitoring only.** The tap is created with `kCGEventTapOptionListenOnly`,
+  so the OS forbids modifying or blocking events. No Accessibility, no Screen
+  Recording, no microphone, no network.
+- Ad-hoc signatures break TCC on every build, so the app is signed with a **stable
+  local identity** (`Klick Local Signing`): the designated requirement is
+  `identifier "app.klick.Klick" and certificate root = H"…"`, which survives
+  recompilation. One grant, then rebuilds keep working.
+- One copy only: builds compile for the current architecture, staging `.app`
+  bundles are unregistered and deleted after packaging, and every build directory
+  carries `.metadata_never_index`.
+
+## Build and test
+
+```sh
+sh scripts/test-native.sh     # 23 checks, no device needed
+sh scripts/build-native.sh    # build + sign for this Mac
+sh scripts/package-native.sh  # both DMGs into dist/
+```
+
+## Legacy
+
+`src/main`, `src/preload`, `src/renderer/audio.js` and the N-API addon in
+`native/capture.c` belong to the **0.3.x Electron implementation**. They are kept
+for reference and as a fallback release (v0.3.1); the shipping app is
+`native/app`.

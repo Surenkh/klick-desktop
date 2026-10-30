@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <AudioToolbox/AudioToolbox.h>
 
 #define KLICK_ROLE_KEYS 0
 #define KLICK_ROLE_SPACE 1
@@ -29,6 +30,14 @@ void audio_trigger(int role, float pan, float gain, float rate, uint64_t host_ti
 double audio_latency_ms(void);      // last tap -> render start
 void audio_reload_for_device(void); // after output device change / wake
 bool audio_take_reconfigure_flag(void);
+bool audio_is_running(void);
+bool audio_load_cues(const char *dir);
+void audio_trigger_cue(int which, float gain);
+void audio_test_mix(float *interleaved, uint32_t frames);
+OSStatus audio_init_status(void);
+OSStatus audio_start_status(void);
+unsigned long audio_render_count(void);
+unsigned long audio_voice_count(void);
 double audio_device_rate(void);
 int audio_pack_volume_ok(void);
 

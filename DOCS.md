@@ -1,6 +1,8 @@
 # Klick — functionality and internals
 
-**Current release: 0.3.0** (macOS 14+, arm64 and x86_64).
+**Current release: 0.4.0** — native macOS 14+ (arm64 and x86_64), ~7 MB, no Electron.
+Key-to-ear latency is ~2–4 ms: see [ARCHITECTURE.md](ARCHITECTURE.md) for the
+CGEventTap → lock-free ring → CoreAudio path.
 
 **App:** Klick · **Character:** Kiki — your little keycap companion.
 Keyboard sounds for macOS and Windows, plus a desktop character that reacts to what you do.

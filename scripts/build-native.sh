@@ -22,10 +22,10 @@ clang -fobjc-arc -O2 -arch "$ARCH" -mmacosx-version-min=14.0 \
 cp native/app/Info.plist "$APP/Contents/Info.plist"
 
 echo "== web UI"
-cp src/renderer/settings.html src/renderer/settings.css src/renderer/settings.js "$APP/Contents/Resources/web/"
+cp src/renderer/settings.html src/renderer/settings.css src/renderer/settings.js src/renderer/buddy.html "$APP/Contents/Resources/web/"
 cp native/app/bridge.js "$APP/Contents/Resources/web/"
 # the web root is Resources/web, so assets are one level up
-sed -i '' 's|\.\./\.\./assets/|../assets/|g' "$APP/Contents/Resources/web/settings.html"
+sed -i '' 's|\.\./\.\./assets/|../assets/|g' "$APP/Contents/Resources/web/settings.html" "$APP/Contents/Resources/web/buddy.html"
 
 echo "== assets"
 cp -R assets/packs assets/buddy assets/cues "$APP/Contents/Resources/assets/" 2>/dev/null || true
@@ -33,8 +33,14 @@ cp assets/icon.png assets/trayTemplate.png "$APP/Contents/Resources/assets/"
 cp assets/icon.png "$APP/Contents/Resources/icon.png"
 [ -f assets/icon.icns ] && cp assets/icon.icns "$APP/Contents/Resources/icon.icns"
 
-echo "== signing (ad-hoc, stable requirement)"
-codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+echo "== signing"
+IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep "Klick Local Signing" | awk '{print $2}' | head -1)"
+if [ -n "$IDENTITY" ] && security find-identity -v -p codesigning 2>/dev/null | grep -q "Klick Local Signing"; then
+  codesign --force --deep --sign "$IDENTITY" --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+else
+  echo "   (no local identity — ad-hoc)"
+  codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+fi
 codesign --verify --deep --strict "$APP" && echo "   signature ok"
 
 echo
@@ -48,6 +54,11 @@ if [ "${1:-}" = "--install" ]; then
   "$LSREG" -u "$PWD/$APP" 2>/dev/null || true
   pkill -f "/Applications/Klick.app/Contents/MacOS/Klick" 2>/dev/null || true
   sleep 1
+  # staging bundles must never be visible to Spotlight/LaunchServices
+  LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+  "$LSREG" -u "$PWD/$APP" 2>/dev/null || true
+  rm -rf "$OUT"/*.app
+  : > "$OUT/.metadata_never_index"
   open -a /Applications/Klick.app
   echo "installed: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /Applications/Klick.app/Contents/Info.plist)"
 fi

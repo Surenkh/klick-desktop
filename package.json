@@ -1,7 +1,7 @@
 {
   "name": "klick",
   "productName": "Klick",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Keyboard sounds with Kiki, your little keycap companion - macOS and Windows.",
   "main": "src/main/index.js",
   "author": "Suren",
@@ -14,7 +14,9 @@
     "dist:win": "electron-builder --win",
     "test": "node scripts/test-keys.js && node scripts/test-agents.js",
     "build:native": "clang -shared -fPIC -O2 -arch arm64 -arch x86_64 -mmacosx-version-min=14.0 -I\"$HOME/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/node/include/node\" -undefined dynamic_lookup -framework ApplicationServices -framework CoreFoundation -o native/klick-capture.node native/capture.c",
-    "dist:dmg": "sh scripts/make-dmg.sh"
+    "dist:dmg": "sh scripts/make-dmg.sh",
+    "dist": "sh scripts/build-local.sh",
+    "dist:ci": "electron-builder --mac dmg --arm64 --publish never && electron-builder --mac dmg --x64 --publish never"
   },
   "dependencies": {
     "uiohook-napi": "^1.5.5"
@@ -52,20 +54,7 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
+        "dmg"
       ],
       "icon": "assets/icon.icns",
       "extendInfo": {
@@ -108,6 +97,9 @@
     "publish": null,
     "npmRebuild": false,
     "buildDependenciesFromSource": false,
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "electronLanguages": [
+      "en"
+    ]
   }
 }
