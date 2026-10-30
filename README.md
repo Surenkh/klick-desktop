@@ -8,7 +8,7 @@ Keyboard sounds for **macOS and Windows**, with **Kiki**, a little keycap compan
 [`INSTALL.md`](INSTALL.md) (one "Open Anyway" click on first launch, because the
 build is unsigned).
 
-New here? [`DOCS.md`](DOCS.md) explains every feature, the internals, the permissions and
+Version history: [`CHANGELOG.md`](CHANGELOG.md). New here? [`DOCS.md`](DOCS.md) explains every feature, the internals, the permissions and
 what is verified versus still missing.
 Built from the behaviour map produced by reverse-engineering TapNoise 0.2.6
 (see [`../targets/tapnoise/RE-FINDINGS.md`](../targets/tapnoise/RE-FINDINGS.md)).

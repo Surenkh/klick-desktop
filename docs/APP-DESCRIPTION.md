@@ -1,7 +1,7 @@
 # Klick — plain-English description
 
-Raw material for a landing page. Written to be true of the 0.2.0 build, not of a
-roadmap.
+Raw material for a landing page. Written to be true of the current release (0.3.0),
+not of a roadmap.
 
 ---
 
