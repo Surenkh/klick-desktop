@@ -15,12 +15,12 @@ Privacy & Security → Open Anyway**, then flip **Input Monitoring** on.
 
 ### Numbers
 
-| Metric | 0.3.1 (Electron) | 0.4.0 (native) |
-| --- | --- | --- |
-| App | 265 MB | **7 MB** |
-| DMG | 127 MB | **7 MB** |
-| tap → render | 45 ms device buffer | **0.4–1.0 ms** |
-| key to ear | ~45–50 ms | **~2–4 ms** |
+| Metric | Klick 0.4.0 (native) |
+| --- | --- |
+| App size | **7 MB** |
+| DMG | **7 MB** |
+| Tap → render | **0.4–1.0 ms** |
+| Key → ear | **~2–4 ms** |
 
 ### What's new
 
