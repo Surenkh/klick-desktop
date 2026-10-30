@@ -190,14 +190,20 @@ async function boot() {
   });
   // ---- first run -----------------------------------------------------------
   const overlay = $('onboarding');
+  // never trap the user: hide first, persist second
+  const dismissOnboarding = () => {
+    overlay.hidden = true;
+    window.klick.onboarded().catch((err) => console.warn('[klick] onboarded failed', err));
+  };
   const showOnboarding = () => { overlay.hidden = false; };
   if (new URLSearchParams(location.search).get('onboarding') === '1') showOnboarding();
-  window.clackle.onOnboarding(showOnboarding);
-  $('onboardTest').addEventListener('click', () => window.clackle.demoTap());
-  $('onboardOpenPerm').addEventListener('click', () => window.clackle.openPrivacy());
-  $('onboardDone').addEventListener('click', async () => {
-    await window.clackle.onboarded();
-    overlay.hidden = true;
+  window.klick.onOnboarding(showOnboarding);
+  $('onboardTest').addEventListener('click', () => window.klick.demoTap());
+  $('onboardOpenPerm').addEventListener('click', () => window.klick.openPrivacy());
+  $('onboardDone').addEventListener('click', dismissOnboarding);
+  $('onboardSkip').addEventListener('click', dismissOnboarding);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) dismissOnboarding();
   });
 
   const paintPerm = (st) => {
@@ -205,25 +211,63 @@ async function boot() {
     const step = $('onboardPerm');
     const ok = st.ok || st.reason === 'preview';
     step.classList.toggle('ok', ok);
-    $('onboardPermTitle').textContent = ok ? 'Listening for keys' : 'One permission: Input Monitoring';
+    $('onboardPermTitle').textContent = ok ? 'Listening for keys' : 'Turn on Input Monitoring';
     $('onboardPermText').textContent = ok
       ? 'All set. Type anything to hear it.'
       : 'macOS asks once so Klick can hear that a key went down. It never sees what you type, and it can never block a keystroke.';
     $('onboardOpenPerm').hidden = ok;
+    // while permission is missing, granting is the primary action
+    $('onboardDone').className = ok ? 'ob-primary' : 'ob-secondary';
+    $('onboardTest').className = ok ? 'ob-secondary' : 'ob-secondary';
   };
-  paintPerm(await window.clackle.hookStatus());
-  window.clackle.onHookStatus(paintPerm);
+  paintPerm(await window.klick.hookStatus());
+  window.klick.onHookStatus(paintPerm);
 
-  // ---- measured latency ----------------------------------------------------
-  const paintLatency = async () => {
-    const sample = await window.clackle.latency();
-    if (!sample) { $('latency').textContent = 'measuring…'; return; }
-    const device = (sample.baseMs || 0) + (sample.outputMs || 0);
-    const total = device + (sample.handlingMs || 0);
-    $('latency').textContent = `${total.toFixed(1)} ms (device ${device.toFixed(1)} + pipeline ${(sample.handlingMs || 0).toFixed(1)})`;
+  // ---- About + diagnostics --------------------------------------------------
+  try {
+    const info = await window.klick.appInfo();
+    $('version').textContent = `Klick ${info.version}`;
+    $('runtime').textContent = `Electron ${info.electron} · Chromium ${info.chrome} · Node ${info.node}`;
+  } catch (err) {
+    console.warn('[klick] app info failed', err);
+  }
+
+  const paintCapture = async () => {
+    try {
+      const c = await window.klick.captureInfo();
+      const listening = c.ok;
+      $('diagCapture').textContent = listening
+        ? 'Listening (Input Monitoring granted)'
+        : c.reason === 'preview' ? 'Preview mode (capture off)'
+        : c.reason === 'permission' ? 'Blocked — grant Input Monitoring'
+        : `Not running (${c.reason})`;
+      $('diagLastKey').textContent = c.lastKeyAt
+        ? `${Math.max(0, Math.round((Date.now() - c.lastKeyAt) / 1000))} s ago`
+        : 'none yet';
+      $('diagKeys').textContent = `${c.keysToday} keys`;
+      $('diagPacks').textContent = `${c.packs} loaded`;
+    } catch (err) {
+      console.warn('[klick] capture info failed', err);
+    }
   };
-  setInterval(paintLatency, 4000);
+
+  const paintLatency = async () => {
+    try {
+      const sample = await window.klick.latency();
+      if (!sample) return;                       // keep the friendly hint
+      const device = (sample.baseMs || 0) + (sample.outputMs || 0);
+      const total = device + (sample.handlingMs || 0);
+      $('latency').textContent =
+        `${total.toFixed(1)} ms (device ${device.toFixed(1)} + pipeline ${(sample.handlingMs || 0).toFixed(1)})`;
+    } catch (err) {
+      console.warn('[klick] latency failed', err);
+    }
+  };
+
+  paintCapture();
   paintLatency();
+  setInterval(paintCapture, 1000);
+  setInterval(paintLatency, 2000);
 
   const banner = $('permBanner');
   const applyHook = (st) => {

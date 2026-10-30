@@ -95,6 +95,17 @@ async function loadCues() {
 loadCues();
 window.klick.onPlay(play);
 
+// publish device latency at startup too, so About is never stuck on "measuring"
+const publishDeviceLatency = () => {
+  window.klick.reportLatency({
+    baseMs: (ctx.baseLatency || 0) * 1000,
+    outputMs: (ctx.outputLatency || 0) * 1000,
+    handlingMs: 0,
+    state: ctx.state
+  }).catch(() => {});
+};
+setTimeout(publishDeviceLatency, 1200);
+
 // Keep the graph alive with silence instead of a system wake lock: audio keeps
 // running, but the Mac can still sleep.
 try {
@@ -121,7 +132,8 @@ try {
 
 let reports = 0;
 function reportLatency(handlingMs) {
-  if (reports++ % 20 !== 0) return;   // sample, not spam
+  if (reports >= 5 && reports % 20 !== 0) { reports += 1; return; }  // first few, then sample
+  reports += 1;
   try {
     window.klick.reportLatency({
       baseMs: (ctx.baseLatency || 0) * 1000,

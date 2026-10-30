@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('klick', {
   cueSamples: () => ipcRenderer.invoke('audio:cues'),
   reportLatency: (sample) => ipcRenderer.invoke('audio:latency', sample),
   latency: () => ipcRenderer.invoke('audio:latency:get'),
+  appInfo: () => ipcRenderer.invoke('app:info'),
+  captureInfo: () => ipcRenderer.invoke('capture:info'),
   onboarded: () => ipcRenderer.invoke('app:onboarded'),
   onOnboarding: (cb) => on('onboarding:show', cb),
   onPlay: (cb) => on('audio:play', cb),

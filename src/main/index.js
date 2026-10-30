@@ -87,6 +87,7 @@ function handleKey(press) {
   playKey({ role: press.role, pan: press.pan });
   windows.toBuddy('buddy:press');
 
+  lastKeyAt = Date.now();
   const { levelledUp } = store.addXp(1);
   if (levelledUp) windows.toBuddy('buddy:mood', 'party');
   pushStatsSoon();
@@ -116,6 +117,7 @@ function simulateKey() {
   return true;
 }
 
+let lastKeyAt = null;
 let lastLatency = null;
 function recordLatency(sample) {
   lastLatency = { ...sample, at: Date.now() };
@@ -231,7 +233,21 @@ if (!app.requestSingleInstanceLock()) {
       openSettings: () => windows.openSettings(),
       logFile: () => path.join(app.getPath('userData'), 'klick.log'),
       recordLatency,
-      lastLatency: () => lastLatency
+      lastLatency: () => lastLatency,
+      appInfo: () => ({
+        version: app.getVersion(),
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        node: process.versions.node,
+        platform: process.platform,
+        arch: process.arch
+      }),
+      captureInfo: () => ({
+        ...keyboardStatus,
+        lastKeyAt,
+        keysToday: store.get().stats.taps,
+        packs: packs.list().length
+      })
     });
 
     try {

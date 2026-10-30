@@ -175,3 +175,30 @@ button.wide { display: block; width: 100%; padding: 11px 14px; text-align: cente
 .onboard-step strong { display: block; margin-bottom: 4px; }
 .onboard-step span { color: #cfd3de; font-size: 12px; display: block; margin-bottom: 10px; }
 .fine { color: var(--muted); font-size: 11px; margin: 14px 0 12px; }
+
+/* onboarding: clear primary / secondary hierarchy */
+.onboard-card { width: 470px; padding: 28px 30px 20px; }
+.onboard-art { width: 104px; height: 104px; display: block; margin: 0 auto 6px; object-fit: contain; }
+.onboard-lede { margin: 0 0 20px !important; }
+.onboard-actions { display: grid; gap: 10px; margin-bottom: 16px; }
+.ob-primary {
+  all: unset; display: block; width: 100%; padding: 12px 16px; border-radius: 10px;
+  text-align: center; cursor: pointer; font-weight: 650; font-size: 13px;
+  background: var(--accent); color: #241a08;
+}
+.ob-primary:hover { filter: brightness(1.06); }
+.ob-primary.small { padding: 9px 14px; font-size: 12px; width: auto; display: inline-block; }
+.ob-secondary {
+  all: unset; display: block; width: 100%; padding: 11px 16px; border-radius: 10px;
+  text-align: center; cursor: pointer; font-size: 13px;
+  background: #262a35; color: var(--text); border: 1px solid var(--line);
+}
+.ob-secondary:hover { background: #2d3240; }
+.ob-link {
+  all: unset; display: block; margin: 8px auto 0; cursor: pointer;
+  color: var(--muted); font-size: 12px; text-align: center; padding: 6px 10px;
+}
+.ob-link:hover { color: var(--text); }
+.onboard-step { text-align: left; }
+.onboard-step.ok { background: rgba(139,224,164,.10); border-color: rgba(139,224,164,.35); }
+.section-title { font-size: 14px; color: var(--muted); font-weight: 600; margin: 22px 0 8px; }

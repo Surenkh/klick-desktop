@@ -8,26 +8,28 @@
   <body>
     <div id="onboarding" hidden>
       <div class="onboard-card">
-        <div class="onboard-art">
-          <img src="../../assets/buddy/anim/idle.webp" alt="Kiki" />
-        </div>
+        <img class="onboard-art" src="../../assets/buddy/anim/idle.webp" alt="Kiki" />
         <h2>Keyboard sounds, everywhere</h2>
-        <p>Klick plays a real keyboard sound under every key you press, in every app.
+        <p class="onboard-lede">A real keyboard sound under every key you press, in every app.
           Kiki, the keycap in the corner, presses along with you.</p>
 
-        <button class="action wide" id="onboardTest">Hear a key</button>
-
-        <div class="onboard-step" id="onboardPerm">
-          <strong id="onboardPermTitle">One permission: Input Monitoring</strong>
-          <span id="onboardPermText">macOS asks once so Klick can hear that a key went down.
-            It never sees what you type, and it can never block a keystroke.</span>
-          <button class="ghost" id="onboardOpenPerm">Open Input Monitoring</button>
+        <div class="onboard-actions">
+          <button class="ob-secondary" id="onboardTest">Hear a key</button>
+          <button class="ob-primary" id="onboardDone">Start typing</button>
         </div>
 
+        <div class="onboard-step" id="onboardPerm">
+          <strong id="onboardPermTitle">Turn on Input Monitoring</strong>
+          <span id="onboardPermText">One macOS switch lets Klick hear that a key went down.
+            It never sees what you type, and it can never block a keystroke.</span>
+          <button class="ob-primary small" id="onboardOpenPerm">Open Input Monitoring</button>
+        </div>
+
+        <button class="ob-link" id="onboardSkip">Not now</button>
         <p class="fine">No network. No account. Nothing leaves this Mac.</p>
-        <button class="action wide" id="onboardDone">Start typing</button>
       </div>
     </div>
+
     <div class="app">
       <aside class="sidebar">
         <div class="brand">
@@ -167,12 +169,20 @@
           <p class="lede">A cross-platform keyboard-sound app for macOS and Windows: every key, a
             little joy, with a keycap buddy and agent cues.</p>
           <div class="card">
-            <div class="kv"><span>Version</span><b id="version">0.1.0</b></div>
+            <div class="kv"><span>Version</span><b id="version">—</b></div>
+            <div class="kv"><span>Runtime</span><b id="runtime">—</b></div>
             <div class="kv"><span>Sounds</span><b>generated locally, MIT</b></div>
             <div class="kv"><span>Permissions</span><b id="perm">Input Monitoring only (macOS)</b></div>
             <div class="kv"><span>Network</span><b>none - Klick makes no network requests</b></div>
-            <div class="kv"><span>Audio latency</span><b id="latency">measuring…</b></div>
             <div class="kv"><span>Log</span><b><button class="ghost" id="revealLog">Reveal log</button></b></div>
+          </div>
+          <h2 class="section-title">Diagnostics</h2>
+          <div class="card">
+            <div class="kv"><span>Key capture</span><b id="diagCapture">—</b></div>
+            <div class="kv"><span>Last key</span><b id="diagLastKey">—</b></div>
+            <div class="kv"><span>Keys today</span><b id="diagKeys">—</b></div>
+            <div class="kv"><span>Sound packs</span><b id="diagPacks">—</b></div>
+            <div class="kv"><span>Audio latency</span><b id="latency">no sample yet — type a key</b></div>
           </div>
           <div class="row buttons">
             <button class="ghost" id="quit">Quit Klick</button>

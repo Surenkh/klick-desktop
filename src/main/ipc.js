@@ -6,7 +6,7 @@ function registerIpc(ctx) {
   const {
     store, packs, cueFiles, agents, cues, audio, windows,
     keyboardStatus, applySettings, simulateKey, quit, openSettings,
-    recordLatency, lastLatency
+    recordLatency, lastLatency, captureInfo, appInfo
   } = ctx;
 
   ipcMain.handle('settings:get', () => store.get());
@@ -49,6 +49,8 @@ function registerIpc(ctx) {
   ipcMain.handle('audio:latency', (_event, sample) => { recordLatency(sample); return true; });
   ipcMain.handle('audio:latency:get', () => lastLatency());
   ipcMain.handle('app:onboarded', () => { store.merge({ onboarded: true }); return true; });
+  ipcMain.handle('app:info', () => appInfo());
+  ipcMain.handle('capture:info', () => captureInfo());
 
   ipcMain.handle('demo:tap', () => simulateKey());
   ipcMain.handle('demo:cue', (_event, kind) => cues.play(kind));
