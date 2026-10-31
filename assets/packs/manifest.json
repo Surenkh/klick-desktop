@@ -1,28 +1,148 @@
 {
   "packs": [
     {
-      "id": "laptop",
-      "name": "Laptop",
-      "vibe": "Crisp, light laptop keys",
-      "category": "Mechanical"
+      "name": "Alpaca",
+      "vibe": "Smooth linear, soft landing",
+      "category": "Linear",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "alpaca"
     },
     {
-      "id": "hard",
-      "name": "Hard",
-      "vibe": "Heavy press with more body",
-      "category": "Thock"
+      "name": "Gateron Ink Black",
+      "vibe": "Creamy linear with a deep bottom",
+      "category": "Linear",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "blackink"
     },
     {
-      "id": "fast",
-      "name": "Fast",
-      "vibe": "Tight and bright, built for speed",
-      "category": "Clicky"
+      "name": "Blue Alps",
+      "vibe": "Vintage clicky, bright and hollow",
+      "category": "Clicky",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "bluealps"
     },
     {
-      "id": "soft",
-      "name": "Soft",
-      "vibe": "Muffled, quiet, office-safe",
-      "category": "Quiet"
+      "name": "Box Navy",
+      "vibe": "Heavy click bar, loud and sharp",
+      "category": "Clicky",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "boxnavy"
+    },
+    {
+      "name": "Buckling Spring",
+      "vibe": "IBM Model M, metallic ping",
+      "category": "Retro",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "buckling"
+    },
+    {
+      "name": "NovelKeys Cream",
+      "vibe": "Poppy full-POM thock",
+      "category": "Thock",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "cream"
+    },
+    {
+      "name": "Holy Panda",
+      "vibe": "Sharp tactile bump, deep thock",
+      "category": "Tactile",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "holypanda"
+    },
+    {
+      "name": "Cherry MX Black",
+      "vibe": "Heavy linear, firm press",
+      "category": "Linear",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "mxblack"
+    },
+    {
+      "name": "Cherry MX Brown",
+      "vibe": "Light tactile, everyday switch",
+      "category": "Tactile",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "mxbrown"
+    },
+    {
+      "name": "Gateron Red Ink",
+      "vibe": "Light linear, smooth and quiet",
+      "category": "Linear",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "redink"
+    },
+    {
+      "name": "Topre",
+      "vibe": "Electro-capacitive thock",
+      "category": "Thock",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "topre"
+    },
+    {
+      "name": "Kailh Pro Turquoise",
+      "vibe": "Crisp clicky with a short throw",
+      "category": "Clicky",
+      "license": "MIT",
+      "author": "Thomas Lai",
+      "source": "github.com/tplai/kbsim",
+      "id": "turquoise"
+    },
+    {
+      "name": "Abstraction",
+      "vibe": "Warm studio keyboard, Ben Burnes",
+      "category": "Thock",
+      "license": "CC0-1.0",
+      "author": "Ben Burnes / Abstraction",
+      "source": "github.com/lavenderdotpet/CC0-Public-Domain-Sounds",
+      "id": "abstraction"
+    },
+    {
+      "name": "Abstraction Model D",
+      "vibe": "Vintage synth keys as a switch",
+      "category": "Retro",
+      "license": "CC0-1.0",
+      "author": "Ben Burnes / Abstraction",
+      "source": "github.com/lavenderdotpet/CC0-Public-Domain-Sounds",
+      "id": "model-d"
+    },
+    {
+      "name": "Cherry KC 1000",
+      "vibe": "Office keyboard through a Shure SM7B",
+      "category": "Laptop",
+      "license": "CC0-1.0",
+      "author": "unicaegames",
+      "source": "opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+      "id": "cherry-kc1000"
+    },
+    {
+      "name": "Cherry Typing",
+      "vibe": "Continuous human typing, cut to hits",
+      "category": "Laptop",
+      "license": "CC0-1.0",
+      "author": "unicaegames",
+      "source": "opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+      "id": "cherry-typing"
     }
   ]
 }

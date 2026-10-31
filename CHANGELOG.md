@@ -4,21 +4,27 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
-## 0.6.0 — in development
+## 0.6.0 — 2026-10-31
 
-- **16 sound packs.** Eleven new character packs synthesised from the reference
-  profiles — Blue Clicky, Creamy Thock, Heavy Tactile, Vintage Typewriter, Low
-  Chiclet, Silent Linear, Topre Thock, Broadcast Desk, Arcade Micro, Aluminium TKL
-  and Gasket Soft — alongside laptop, hard, fast, soft and studio. All MIT, ~3 MB.
-- **Pack library UI**: a two-column card grid with category filters (All, Mechanical,
-  Thock, Clicky, Quiet, Retro), each card showing name, vibe and category, and
-  clicking one switches pack and auditions three keys.
-- **Pack metadata** in `assets/packs/manifest.json` (id, display name, vibe,
-  category), read by the app and used by the menu bar.
-- **Engine**: `MAX_PACKS` raised to 32; tests now load all 16 and confirm every pack
-  produces audio.
+- **16 packs of real recordings, all MIT or CC0.** Twelve switches (Alpaca, Ink
+  Black, Blue Alps, Box Navy, Buckling Spring, Cream, Holy Panda, MX Black, MX Brown,
+  Red Ink, Topre, Kailh Pro Turquoise) from [tplai/kbsim](https://github.com/tplai/kbsim)
+  (MIT, © Thomas Lai); two from Ben Burnes' CC0 keyboard pack; two from unicaegames'
+  CC0 Cherry KC 1000 recordings. Nothing synthesised, no Mixkit or Epidemic material
+  anywhere in the tree or history.
+- **Pack library UI**: two-column card grid, category filters (All, Thock, Tactile,
+  Clicky, Linear, Retro, Laptop), and every card auditions three keys when clicked.
+- **Per-pack licence metadata** in `assets/packs/manifest.json` (id, name, vibe,
+  category, licence, author, source).
+- Engine: `MAX_PACKS` 32; tests load all 16 and confirm each produces audio.
 
-## 0.5.0 — 2026-10-31
+## 0.5.0 — withdrawn
+
+Removed from Releases: its `studio` pack was cut from Epidemic Sound recordings, whose
+subscription covers productions but not redistribution of the audio files. The
+release and tag were deleted and the audio purged from history.
+
+
 
 - **Hats that actually sit on Kiki's head.** Six level-reward hats (mint beanie,
   baseball cap, explorer, wizard, graduation cap, golden crown) drawn from the new

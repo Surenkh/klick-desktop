@@ -84,7 +84,7 @@ async function preview(pack) {
 let PACK_LIST = [];
 let PACK_FILTER = 'All';
 
-const PACK_CATEGORIES = ['All', 'Mechanical', 'Thock', 'Clicky', 'Quiet', 'Retro'];
+const PACK_CATEGORIES = ['All', 'Thock', 'Tactile', 'Clicky', 'Linear', 'Retro', 'Laptop'];
 
 function renderPackFilters() {
   const host = $('packFilters');

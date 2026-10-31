@@ -72,7 +72,7 @@ int main(void) {
 
     printf("packs\n");
     int packs = audio_load_packs("assets/packs");
-    CHECK(packs >= 4, "at least 4 packs load from assets/packs (got %d)", packs);
+    CHECK(packs >= 16, "at least 16 packs load from assets/packs (got %d)", packs);
     for (int i = 0; i < packs; i++) {
         CHECK(strlen(audio_pack_name(i)) > 0, "pack %d has a name (%s)", i, audio_pack_name(i));
     }

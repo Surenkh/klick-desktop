@@ -4,48 +4,48 @@ Assets as shipped in **Klick 0.3.0**.
 
 ## Sound sources
 
-The four shipped packs (`laptop`, `hard`, `fast`, `soft`) are cut from Mixkit
-recordings under the Mixkit Free License — usable in this app, not MIT, and not
-redistributable as standalone audio. The fifth, `studio`, is **synthesised from scratch**:
-`scripts/gen-sounds.py` measures a set of reference takes (envelopes, modal peaks and
-bandwidths, spectral tilt, sub-bass, 32-band spectrum) into
-`scripts/studio-profile.json`, then rebuilds new WAVs from those numbers. No reference
-audio ships — the pack contains only our own synthesis and is MIT like the code.
+All 16 shipped packs are real recordings under MIT or CC0. Nothing is synthesised,
+and no Mixkit or Epidemic Sound material remains.
 
-| Pack | Source recordings |
+### MIT — [tplai/kbsim](https://github.com/tplai/kbsim)
+
+Copyright © Thomas Lai, MIT Licence. Twelve switch packs, cut from the repository's
+`src/assets/audio/<switch>/press/` samples:
+
+| Pack | Switch |
 | --- | --- |
-| `laptop` | Mixkit "Laptop keyboard typing sequence" (2537), "Typing on a laptop keyboard" (2531), "Single key type" (2533) |
-| `hard` | Mixkit "Hard laptop keyboard typing" (2538), "Writing on a laptop keyboard" (2536) |
-| `fast` | Mixkit "Fast keyboard typing" (1387), "Keyboard typing" (1386) |
-| `soft` | Mixkit "Slow typing on a keyboard" (2532), "Laptop backspace typing sequence" (2539), "Keyboard random typing" (1388) |
+| `alpaca` | Alpaca |
+| `blackink` | Gateron Ink Black |
+| `bluealps` | Blue Alps |
+| `boxnavy` | Box Navy |
+| `buckling` | Buckling Spring (Model M) |
+| `cream` | NovelKeys Cream |
+| `holypanda` | Holy Panda |
+| `mxblack` | Cherry MX Black |
+| `mxbrown` | Cherry MX Brown |
+| `redink` | Gateron Red Ink |
+| `topre` | Topre |
+| `turquoise` | Kailh Pro Turquoise |
 
-Each pack contains individual keystrokes cut out of those performances by
-`scripts/extract-keystrokes.py` (spectral-flux onset detection, one hit per
-cut, loudness-normalised, 48 kHz mono). No file is shipped as-is: every sample
-is a single-key excerpt of 24-170 ms.
+### CC0 1.0 — [Ben Burnes / Abstraction](https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds)
 
-## Licence note - read before publishing
+"bb - Keyboard Sounds (Mar 2021)", released into the public domain.
 
-Mixkit's free licence allows commercial use in a project, **without
-attribution**, but it does **not** allow redistributing or reselling the sound
-files as standalone assets. An app that ships the raw WAVs inside its bundle is
-the grey area of that rule.
+| Pack | Material |
+| --- | --- |
+| `abstraction` | Keyboard key and key-combo recordings |
+| `model-d` | Model D switch and button recordings |
 
-- Personal use, internal builds, prototypes: fine.
-- Public release: either keep them out of the shipped bundle (download/import
-  on first run from the user's own copy), or replace the packs with your own
-  recordings, or with samples explicitly licensed for embedding (CC0 / paid
-  licence that grants redistribution inside an application).
+### CC0 1.0 — [unicaegames](https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes)
 
-Klick's code is MIT; the audio in `assets/packs/` is **not** covered by that
-MIT grant and carries the restriction above.
+Cherry KC 1000 recorded with a Shure SM7B.
 
-## Generated fallback
+| Pack | Material |
+| --- | --- |
+| `cherry-kc1000` | The 32 single-keypress recordings |
+| `cherry-typing` | Human typing takes, cut into single hits |
 
-`scripts/gen-sounds.py` still produces purely synthesised packs (modal
-synthesis, no samples at all). Run `python3 scripts/gen-sounds.py` if you ever need audio with
-no licensing questions attached. The current `assets/packs/` do not contain any
-generated packs.
+Every pack records its licence, author and source in `assets/packs/manifest.json`.
 
 ## Character art — Kiki
 
