@@ -23,48 +23,6 @@
       "name": "Soft",
       "vibe": "Muffled, quiet, office-safe",
       "category": "Quiet"
-    },
-    {
-      "id": "apple",
-      "name": "Apple Laptop",
-      "vibe": "The typing take as recorded",
-      "category": "Mechanical"
-    },
-    {
-      "id": "cooler-master",
-      "name": "Cooler Master",
-      "vibe": "Cooler Master space bar, full body",
-      "category": "Thock"
-    },
-    {
-      "id": "corsair",
-      "name": "Corsair",
-      "vibe": "Corsair enter and backspace",
-      "category": "Mechanical"
-    },
-    {
-      "id": "dell",
-      "name": "Dell",
-      "vibe": "Dell backspace and period",
-      "category": "Mechanical"
-    },
-    {
-      "id": "logitech",
-      "name": "Logitech",
-      "vibe": "Logitech enter, crisp",
-      "category": "Clicky"
-    },
-    {
-      "id": "razer",
-      "name": "Razer",
-      "vibe": "Razer clicks, sharp and fast",
-      "category": "Clicky"
-    },
-    {
-      "id": "studio",
-      "name": "Studio",
-      "vibe": "The full studio take, mixed brands",
-      "category": "Mechanical"
     }
   ]
 }
