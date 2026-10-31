@@ -4,8 +4,9 @@ Assets as shipped in **Klick 0.3.0**.
 
 ## Sound sources
 
-Four packs (`laptop`, `hard`, `fast`, `soft`) were cut from recording sequences
-supplied by the project owner. The fifth, `studio`, is **synthesised from scratch**:
+The four shipped packs (`laptop`, `hard`, `fast`, `soft`) are cut from Mixkit
+recordings under the Mixkit Free License — usable in this app, not MIT, and not
+redistributable as standalone audio. The fifth, `studio`, is **synthesised from scratch**:
 `scripts/gen-sounds.py` measures a set of reference takes (envelopes, modal peaks and
 bandwidths, spectral tilt, sub-bass, 32-band spectrum) into
 `scripts/studio-profile.json`, then rebuilds new WAVs from those numbers. No reference
