@@ -68,11 +68,54 @@ def hit(data, sr, at, ms):
     return data[at:min(len(data), at + int(sr * ms / 1000))]
 
 
+def build_session(args):
+    """Build one pack from a record-keyboard.sh session folder."""
+    work = tempfile.mkdtemp()
+    out = os.path.join(args.root, args.id)
+    os.makedirs(out, exist_ok=True)
+    for old in os.listdir(out):
+        if old.endswith(".wav"):
+            os.remove(os.path.join(out, old))
+
+    keys = decode(os.path.join(args.session, "keys.wav"), work)
+    sr = SR
+    cuts = []
+    for at in onsets(keys, sr)[:6]:
+        cuts.append(hit(keys, sr, max(0, at - int(sr * 0.001)), 180))
+    if not cuts:
+        raise SystemExit("no keystrokes found in keys.wav")
+    for i in range(6):
+        save(os.path.join(out, "keys-%d.wav" % (i + 1)), cuts[i % len(cuts)])
+
+    for role, ms in (("space", 320), ("enter", 300), ("delete", 260)):
+        data = decode(os.path.join(args.session, role + ".wav"), work)
+        found = onsets(data, sr)
+        at = found[0] if found else 0
+        save(os.path.join(out, role + "-1.wav"), hit(data, sr, max(0, at - int(sr * 0.001)), ms))
+
+    manifest_path = os.path.join(args.root, "manifest.json")
+    manifest = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {"packs": []}
+    manifest["packs"] = [p for p in manifest["packs"] if p["id"] != args.id]
+    manifest["packs"].append({
+        "id": args.id, "name": args.name or args.id,
+        "vibe": "Recorded on this Mac", "category": "Mechanical",
+        "license": "CC0-1.0", "author": "you", "source": "local recording"})
+    json.dump(manifest, open(manifest_path, "w"), indent=2)
+    print("  built %s with %d key takes" % (args.id, len(cuts)))
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--src", required=True)
+    parser.add_argument("--src", help="folder of reference recordings")
+    parser.add_argument("--session", help="folder recorded by record-keyboard.sh")
+    parser.add_argument("--id", help="pack id for --session")
+    parser.add_argument("--name", help="display name for --session")
     parser.add_argument("--root", default="assets/packs")
     args = parser.parse_args()
+
+    if args.session:
+        build_session(args)
+        return
 
     files = sorted(glob.glob(os.path.join(args.src, "*.mp3")))
     if not files:
