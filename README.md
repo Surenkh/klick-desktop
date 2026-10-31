@@ -13,8 +13,8 @@ Grab the DMG for your Mac from [Releases](https://github.com/Surenkh/klick-deskt
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M6) | `Klick-0.4.3-arm64.dmg` |
-| Intel | `Klick-0.4.3-x64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.5.0-arm64.dmg` |
+| Intel | `Klick-0.5.0-x64.dmg` |
 
 Open the DMG, drag **Klick** to Applications, then launch it. macOS will refuse an
 unsigned app once: **System Settings → Privacy & Security → Open Anyway**. Klick then
@@ -23,10 +23,15 @@ block a keystroke.
 
 ## What it does
 
-- A real keyboard sound under every key, in every app, from four packs cut from
-  actual recordings (laptop, hard, fast, soft).
+- A real keyboard sound under every key, in every app, from **five packs**
+  (laptop, hard, fast, soft, and *studio* — synthesised from an acoustic profile of
+  real keyboards).
 - **Kiki** floats above your windows, bounces on every key, can be dragged
   anywhere, and slaps back (+10 XP) when you click him.
+- **XP, levels and hats** — every key earns XP, Kiki levels up, and six hats unlock
+  along the way. The Today tab shows a live progress bar and your wardrobe.
+- **Three volume channels** — key taps, celebrations, and agent cues each have their
+  own slider.
 - **Agent cues** for Claude Code (Cursor and Codex are on the roadmap): a soft chime
   when a task finishes, a sharper one when it fails, two rising notes when it needs
   you.
@@ -40,7 +45,7 @@ Recording, no microphone, no network, no account, no telemetry.
 
 ## Why it is small and fast
 
-| Metric | Klick 0.4.3 (native) |
+| Metric | Klick 0.5.0 (native) |
 | --- | --- |
 | App size | **7 MB** |
 | DMG | **7 MB** |
@@ -56,7 +61,7 @@ delay it. Details in [ARCHITECTURE.md](ARCHITECTURE.md).
 Requires Xcode Command Line Tools (clang), macOS 14+.
 
 ```sh
-sh scripts/test-native.sh      # 43 checks: keymap, packs, mixer, cues
+sh scripts/test-native.sh      # 48 checks: keymap, packs, mixer, cues, stats
 sh scripts/build-native.sh     # build + sign for this Mac
 sh scripts/build-native.sh --install   # build, install to /Applications, launch
 sh scripts/package-native.sh   # both DMGs into dist/

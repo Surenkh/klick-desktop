@@ -4,7 +4,12 @@ Assets as shipped in **Klick 0.3.0**.
 
 ## Sound sources
 
-The four shipped packs were cut from recording sequences supplied by the project owner:
+Four packs (`laptop`, `hard`, `fast`, `soft`) were cut from recording sequences
+supplied by the project owner. The fifth, `studio`, is **synthesised from scratch**:
+`scripts/gen-sounds.py` measures a set of reference takes (envelopes, modal peaks and
+bandwidths, spectral tilt, sub-bass, 32-band spectrum) into
+`scripts/studio-profile.json`, then rebuilds new WAVs from those numbers. No reference
+audio ships — the pack contains only our own synthesis and is MIT like the code.
 
 | Pack | Source recordings |
 | --- | --- |

@@ -4,6 +4,40 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.5.0 — 2026-10-31
+
+- **Hats that actually sit on Kiki's head.** Six level-reward hats (mint beanie,
+  baseball cap, explorer, wizard, graduation cap, golden crown) drawn from the new
+  artwork with per-hat anchors, a natural tilt, centred over the face and riding
+  inside the bounce container so they never drift.
+- **Wardrobe in Today** — every tier shown with its art, locked ones dimmed with
+  their level, click an unlocked hat to wear it (or *No hat* to take it off).
+- **Real XP progression** — level badge, `XP / next-level` counter, animated mint
+  progress bar and a "XP to Level N — next hat" hint. The curve is shared with the
+  C core (`stats.c`).
+- **Three volume channels** — key taps, celebrations, and agent/system cues are now
+  independent sliders wired straight into the CoreAudio mixer, each with a preview.
+- **Studio pack** — a fifth pack, synthesised from scratch by `scripts/gen-sounds.py`
+  using an acoustic profile of reference takes (modal peaks, bandwidths, tilt,
+  sub-bass, 32-band envelope). All five packs are original and MIT.
+- **Kiki and the tap counter are separate windows** — each draggable and remembered
+  independently; the gear icon is gone (the menu bar owns Settings).
+- **Instant counting** — stats flush on the key press instead of a 1 s timer; the
+  counter pill keeps a fixed 10 px radius and never warps.
+- **Celebrations work again** — the milestone burst, confetti and toast fire
+  reliably; the standard sprite hides for the burst so there is only one Kiki.
+- Native tests: **48 checks**.
+
+## 0.4.3 — 2026-10-30
+
+- Two-line "Open Input / Monitoring" banner CTA at every width; mint theme with the
+  amber warning preserved; reset taps behind a two-step confirm.
+
+## 0.4.2 — 2026-10-30
+
+- Fixed a crash on boolean bridge replies, Settings never loading, and the Sound
+  menu being empty before packs were indexed.
+
 ## 0.4.1 — 2026-10-30
 
 - **Live stats.** Every captured key adds +1 tap and +1 XP, Kiki slaps give +10 XP;
