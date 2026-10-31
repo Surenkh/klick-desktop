@@ -11,11 +11,11 @@ int klick_level_for(uint32_t xp) {
 
 const char *klick_hat_for(int level) {
     if (level >= 15) return "crown";
-    if (level >= 10) return "chef";
-    if (level >= 8) return "beanie";
-    if (level >= 6) return "headphones";
-    if (level >= 4) return "sunglasses";
-    if (level >= 2) return "party";
+    if (level >= 10) return "graduation";
+    if (level >= 8) return "wizard";
+    if (level >= 6) return "explorer";
+    if (level >= 4) return "baseball";
+    if (level >= 2) return "beanie";
     return NULL;
 }
 

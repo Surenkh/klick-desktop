@@ -269,7 +269,13 @@ button.action.danger.final { background: #7c1f27; color: #fff; }
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }
 .hat:hover { transform: translateY(-1px); border-color: rgba(141, 234, 193, .45); }
-.hat .glyph { font-size: 30px; line-height: 1; filter: saturate(1.1); }
+.hat .art {
+  display: flex; align-items: center; justify-content: center;
+  height: 66px; width: 100%;
+}
+.hat .art img { width: 64px; height: 64px; object-fit: contain; }
+.hat .art .lock { font-size: 26px; opacity: .8; }
+.hat .art.nohat { font-size: 30px; height: 66px; }
 .hat .name { font-size: 12px; font-weight: 600; }
 .hat .need { font-size: 10.5px; color: var(--muted); }
 .hat.locked { opacity: .45; cursor: default; }
@@ -281,4 +287,7 @@ button.action.danger.final { background: #7c1f27; color: #fff; }
 }
 
 /* hat card keeps a single line with its emoji */
-#stHat.with-hat { font-size: 22px; line-height: 1.2; }
+#stHat.with-hat {
+  display: flex; align-items: center; gap: 8px; font-size: 20px; line-height: 1.2;
+}
+#stHat img.hat-mini { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }

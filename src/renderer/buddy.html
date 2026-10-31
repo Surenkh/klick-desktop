@@ -59,17 +59,17 @@
       }
       #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
 
-      #hatBadge {
-        position: absolute; left: 50%; top: 2px; transform: translateX(-50%);
-        font-size: 26px; line-height: 1; pointer-events: none; z-index: 4;
-        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .45));
-        opacity: 0; transition: opacity 160ms ease;
+      #hat {
+        position: absolute; z-index: 5; pointer-events: none;
+        display: none; transform-origin: 50% 90%;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .4));
       }
-      #hatBadge.on { opacity: 1; }
+      #hat.on { display: block; }
 
       #stage {
         position: absolute; inset: 0; display: flex; align-items: center;
-        justify-content: center; padding: 8px;
+        justify-content: center; align-items: flex-end;
+        padding: 40px 8px 10px;
         -webkit-app-region: drag; overflow: hidden;
       }
 
@@ -161,7 +161,7 @@
       <div id="celebrate"></div>
       <div id="toast"></div>
       <img id="burst" src="../../assets/buddy/celebrate.png" alt="" />
-      <div id="hatBadge"></div>
+      <img id="hat" alt="" />
       <div id="float">
         <div id="char" hidden>
           <img class="klick" id="k0" alt="Kiki" />
@@ -394,22 +394,67 @@
     }
     if (api.onStats) api.onStats(() => {});   // keep the channel warm
 
-    // equipped hat badge
-    const HAT_EMOJI = { party: '\u{1F389}', sunglasses: '\u{1F60E}', headphones: '\u{1F3A7}',
-                        beanie: '\u{1F9F6}', chef: '\u{1F468}\u200D\u{1F373}', crown: '\u{1F451}' };
-    const badge = document.getElementById('hatBadge');
-    const paintHat = (name) => {
-      if (name && typeof name === 'object') name = name.equipped || name.equippedHat;
-      const emoji = HAT_EMOJI[name];
-      if (!badge) return;
-      badge.textContent = emoji || '';
-      badge.classList.toggle('on', !!emoji);
-      if (api.debug) api.debug(`hat badge ${name || 'none'} emoji=${emoji || '-'}`);
+    // equipped hat: drawn on Kiki's head using the artwork's anchors
+    const HAT_ART = {
+      beanie:     { file: 'klicky-hat-01-mint-beanie.png',    ax: 0.50, ay: 0.79, ratio: 0.52 },
+      baseball:   { file: 'klicky-hat-02-baseball-cap.png',   ax: 0.53, ay: 0.70, ratio: 0.52 },
+      explorer:   { file: 'klicky-hat-03-explorer-hat.png',   ax: 0.50, ay: 0.70, ratio: 0.52 },
+      wizard:     { file: 'klicky-hat-04-wizard-hat.png',     ax: 0.50, ay: 0.70, ratio: 0.50 },
+      graduation: { file: 'klicky-hat-05-graduation-cap.png', ax: 0.53, ay: 0.70, ratio: 0.53 },
+      crown:      { file: 'klicky-hat-06-golden-crown.png',   ax: 0.50, ay: 0.73, ratio: 0.48 }
     };
-    if (api.onSettings) api.onSettings((st) => paintHat(st && (st.equipped || st.equippedHat)));
+    const CHAR_ANCHOR = { x: 0.43, y: 0.245 };
+    const hatImg = document.getElementById('hat');
+    let currentHat = null;
+    let equippedPref = null;
+    let autoHat = null;
+
+    const placeHat = () => {
+      const art = HAT_ART[currentHat];
+      const float = document.getElementById('float');
+      if (!art || !float || !hatImg) return;
+      const rect = float.getBoundingClientRect();
+      const size = rect.width * art.ratio * 1.06;
+      hatImg.style.width = `${size}px`;
+      hatImg.style.height = `${size}px`;
+      hatImg.style.left = `${rect.left + rect.width * CHAR_ANCHOR.x - size * art.ax}px`;
+      hatImg.style.top = `${rect.top + rect.height * CHAR_ANCHOR.y - size * art.ay - 3}px`;
+    };
+
+    const applyHat = () => {
+      if (equippedPref === 'none') { currentHat = null; }
+      else if (equippedPref && HAT_ART[equippedPref]) { currentHat = equippedPref; }
+      else { currentHat = (autoHat && HAT_ART[autoHat]) ? autoHat : null; }
+      if (!hatImg) return;
+      if (!currentHat) {
+        hatImg.classList.remove('on');
+        hatImg.removeAttribute('src');
+        if (api.debug) api.debug('hat off');
+        return;
+      }
+      hatImg.src = `../../assets/buddy/hats/${HAT_ART[currentHat].file}`;
+      hatImg.classList.add('on');
+      placeHat();
+      if (api.debug) {
+        api.debug(`hat ${currentHat} src=${hatImg.getAttribute('src')} w=${hatImg.style.width}`);
+      }
+    };
+
+    if (api.onSettings) api.onSettings((st) => {
+      equippedPref = (st && (st.equippedHat || st.equipped)) || null;
+      applyHat();
+    });
+    if (api.onStats) api.onStats((st) => {
+      autoHat = st && st.hat;
+      if (!equippedPref || !HAT_ART[equippedPref]) applyHat();
+    });
     if (api.getSettings) {
-      api.getSettings().then((st) => { if (st) paintHat(st.equipped || st.equippedHat); }).catch(() => {});
+      api.getSettings().then((st) => {
+        if (st) { equippedPref = st.equippedHat || st.equipped || null; applyHat(); }
+      }).catch(() => {});
     }
+    window.addEventListener('resize', placeHat);
+    hatImg && hatImg.addEventListener('load', placeHat);
     window.addEventListener('load', () => {
       if (burst && api.debug) api.debug(`burst art ${burst.naturalWidth}x${burst.naturalHeight}`);
     });

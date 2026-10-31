@@ -139,13 +139,14 @@ async function renderAgents() {
 
   // ---- gamification: XP curve, progress and wardrobe ------------------------
   const HATS = [
-    { level: 2,  id: 'party',      name: 'Party',      glyph: '🎉' },
-    { level: 4,  id: 'sunglasses', name: 'Sunglasses', glyph: '😎' },
-    { level: 6,  id: 'headphones', name: 'Headphones', glyph: '🎧' },
-    { level: 8,  id: 'beanie',     name: 'Beanie',     glyph: '🧶' },
-    { level: 10, id: 'chef',       name: 'Chef',       glyph: '👨‍🍳' },
-    { level: 15, id: 'crown',      name: 'Crown',      glyph: '👑' }
+    { level: 2,  id: 'beanie',     name: 'Mint beanie',    file: 'klicky-hat-01-mint-beanie.png' },
+    { level: 4,  id: 'baseball',   name: 'Baseball cap',   file: 'klicky-hat-02-baseball-cap.png' },
+    { level: 6,  id: 'explorer',   name: 'Explorer hat',   file: 'klicky-hat-03-explorer-hat.png' },
+    { level: 8,  id: 'wizard',     name: 'Wizard hat',     file: 'klicky-hat-04-wizard-hat.png' },
+    { level: 10, id: 'graduation', name: 'Graduation cap', file: 'klicky-hat-05-graduation-cap.png' },
+    { level: 15, id: 'crown',      name: 'Golden crown',   file: 'klicky-hat-06-golden-crown.png' }
   ];
+  const hatArt = (file) => `../assets/buddy/hats/${file}`;
   const HAT_BY_LEVEL = (lvl) => HATS.find((h) => h.level === lvl) || null;
   const HAT_BY_ID = (id) => HATS.find((h) => h.id === id) || null;
   // start XP of level L is 60 * L * (L - 1); mirrors klick_level_for in C
@@ -163,7 +164,9 @@ async function renderAgents() {
     const autoHat = HAT_BY_ID(latestStats.hat) || HAT_BY_LEVEL(level);
     const worn = HAT_BY_ID(latestStats.equipped) || autoHat;
     if ($('stHat')) {
-      $('stHat').textContent = worn ? `${worn.glyph} ${worn.name}` : '—';
+      $('stHat').innerHTML = worn
+        ? `<img class="hat-mini" src="${hatArt(worn.file)}" alt="" /><span>${worn.name}</span>`
+        : '<span>No hat</span>';
       $('stHat').classList.toggle('with-hat', !!worn);
     }
 
@@ -197,17 +200,34 @@ async function renderAgents() {
       el.className = `hat ${unlocked ? 'unlocked' : 'locked'}${equipped ? ' equipped' : ''}`;
       el.disabled = !unlocked;
       el.innerHTML =
-        `<span class="glyph">${unlocked ? hat.glyph : '🔒'}</span>` +
+        `<span class="art">${unlocked
+            ? `<img src="${hatArt(hat.file)}" alt="" />`
+            : '<span class="lock">🔒</span>'}</span>` +
         `<span class="name">${hat.name}</span>` +
-        `<span class="need">${unlocked ? (equipped ? 'wearing' : `Lv ${hat.level}`) : `Lv ${hat.level}`}</span>`;
+        `<span class="need">${unlocked ? (equipped ? 'wearing · click to remove' : `Lv ${hat.level}`) : `🔒 Lv ${hat.level}`}</span>`;
       if (unlocked) {
         el.addEventListener('click', async () => {
-          cfg = await window.klick.setSettings({ equippedHat: hat.id });
-          paintStats({ equipped: hat.id });
+          const next = equipped ? 'none' : hat.id;
+          cfg = await window.klick.setSettings({ equippedHat: next });
+          paintStats({ equipped: next });
         });
       }
       host.appendChild(el);
     }
+
+    // explicit "no hat" option so anyone can take it off
+    const none = document.createElement('button');
+    const wearingNone = !wornId || wornId === 'none';
+    none.className = `hat unlocked${wearingNone ? ' equipped' : ''}`;
+    none.innerHTML =
+      '<span class="art nohat">🚫</span>' +
+      '<span class="name">No hat</span>' +
+      `<span class="need">${wearingNone ? 'wearing nothing' : 'click to remove'}</span>`;
+    none.addEventListener('click', async () => {
+      cfg = await window.klick.setSettings({ equippedHat: 'none' });
+      paintStats({ equipped: 'none' });
+    });
+    host.appendChild(none);
   };
 
   window.klick.onStats((s) => {

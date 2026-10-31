@@ -613,7 +613,7 @@ static void mirror_settings(NSDictionary *settings) {
     if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
 
     NSRect visible = [NSScreen mainScreen].visibleFrame;
-    CGFloat width = 152, height = 152;
+    CGFloat width = 172, height = 196;
     CGFloat x = num(self.settings[@"buddyX"], 0);
     CGFloat y = num(self.settings[@"buddyY"], 0);
     if (x <= 0 && y <= 0) {

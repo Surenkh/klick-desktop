@@ -56,11 +56,11 @@ int main(void) {
     CHECK(klick_level_for(100000) > 20, "large xp keeps rising");
 
     CHECK(klick_hat_for(1) == NULL, "no hat at level 1");
-    CHECK(klick_hat_for(2) != NULL, "party hat at level 2");
-    CHECK(strcmp(klick_hat_for(4), "sunglasses") == 0, "sunglasses at level 4");
-    CHECK(strcmp(klick_hat_for(6), "headphones") == 0, "headphones at level 6");
-    CHECK(strcmp(klick_hat_for(8), "beanie") == 0, "beanie at level 8");
-    CHECK(strcmp(klick_hat_for(10), "chef") == 0, "chef at level 10");
+    CHECK(strcmp(klick_hat_for(2), "beanie") == 0, "mint beanie at level 2");
+    CHECK(strcmp(klick_hat_for(4), "baseball") == 0, "baseball cap at level 4");
+    CHECK(strcmp(klick_hat_for(6), "explorer") == 0, "explorer hat at level 6");
+    CHECK(strcmp(klick_hat_for(8), "wizard") == 0, "wizard hat at level 8");
+    CHECK(strcmp(klick_hat_for(10), "graduation") == 0, "graduation cap at level 10");
     CHECK(strcmp(klick_hat_for(15), "crown") == 0, "crown at level 15");
 
     CHECK(klick_milestone_crossed(99, 100, 100) == 100, "99 -> 100 crosses the 100 milestone");
