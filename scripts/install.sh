@@ -73,7 +73,10 @@ rm -rf "$DEST" 2>/dev/null || true
 
 hdiutil detach "$TMP/mnt" -quiet >/dev/null 2>&1 || true
 
-# The app is ad-hoc signed: clear the quarantine flag so Gatekeeper stays quiet.
+# Clear the quarantine flag the DMG copy carries, then re-sign ad-hoc on this Mac
+# so the signature never depends on a certificate the user does not have.
+xattr -cr "$DEST" 2>/dev/null || true
+codesign --force --deep --sign - "$DEST" >/dev/null 2>&1 || true
 xattr -cr "$DEST" 2>/dev/null || true
 codesign --verify --deep --strict "$DEST" >/dev/null 2>&1 \
   && say "Signature verified." \

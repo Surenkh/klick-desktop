@@ -49,9 +49,9 @@ and no network code in the app at all.
 
 ```
 shasum -a 256 Klick-0.5.0-arm64.dmg
-# 3f28eacbb1acecfb60687508afffac0c5513f956228b713dc5d99aed73a58053
+# 8aeaf81d82f3502a7ad2978e29785fb4332c711e0b333b8d4f943b62095834e6
 shasum -a 256 Klick-0.5.0-x64.dmg
-# d49b0c8e60d66fc54ae69f5877bd49337e8240219cdc0a5a73bf6a97a75531f2
+# 863d8b2fcfe9c13eb9353563cf70d5ea793b59d637461dc10075c0938e4b0f58
 ```
 
 ## Uninstall

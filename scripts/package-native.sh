@@ -29,15 +29,15 @@ sign_app() {
     codesign --force --deep --options runtime --timestamp \
       --sign "$DEVELOPER_ID_APPLICATION" \
       --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
-  else
+  elif [ "${KLICK_LOCAL_SIGN:-0}" = "1" ]; then
+    # Only for this machine: a self-signed root is untrusted on everyone else's
+    # Mac, which Gatekeeper treats as worse than no signature at all.
     IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep "Klick Local Signing" | awk '{print $2}' | head -1)"
-    if [ -n "$IDENTITY" ]; then
-      echo "   signing with local identity"
-      codesign --force --deep --sign "$IDENTITY" --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
-    else
-      echo "   ad-hoc signature (no certificate available)"
-      codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
-    fi
+    echo "   signing with local identity (KLICK_LOCAL_SIGN=1)"
+    codesign --force --deep --sign "$IDENTITY" --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+  else
+    echo "   ad-hoc signature (portable; no untrusted certificate chain)"
+    codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
   fi
   codesign --verify --deep --strict "$APP"
 }
