@@ -25,76 +25,46 @@
       "category": "Quiet"
     },
     {
+      "id": "apple",
+      "name": "Apple Laptop",
+      "vibe": "The typing take as recorded",
+      "category": "Mechanical"
+    },
+    {
+      "id": "cooler-master",
+      "name": "Cooler Master",
+      "vibe": "Cooler Master space bar, full body",
+      "category": "Thock"
+    },
+    {
+      "id": "corsair",
+      "name": "Corsair",
+      "vibe": "Corsair enter and backspace",
+      "category": "Mechanical"
+    },
+    {
+      "id": "dell",
+      "name": "Dell",
+      "vibe": "Dell backspace and period",
+      "category": "Mechanical"
+    },
+    {
+      "id": "logitech",
+      "name": "Logitech",
+      "vibe": "Logitech enter, crisp",
+      "category": "Clicky"
+    },
+    {
+      "id": "razer",
+      "name": "Razer",
+      "vibe": "Razer clicks, sharp and fast",
+      "category": "Clicky"
+    },
+    {
       "id": "studio",
       "name": "Studio",
-      "vibe": "Neutral studio keys, full take",
+      "vibe": "The full studio take, mixed brands",
       "category": "Mechanical"
-    },
-    {
-      "id": "blue-clicky",
-      "name": "Blue Clicky",
-      "vibe": "Sharp buckling click with a plastic snap",
-      "category": "Clicky"
-    },
-    {
-      "id": "creamy-thock",
-      "name": "Creamy Thock",
-      "vibe": "Deep PBT thock, rounded and warm",
-      "category": "Thock"
-    },
-    {
-      "id": "heavy-tactile",
-      "name": "Heavy Tactile",
-      "vibe": "Heavy bump, long housing ring",
-      "category": "Mechanical"
-    },
-    {
-      "id": "vintage-typewriter",
-      "name": "Vintage Typewriter",
-      "vibe": "Metal clack with a long mechanical ring",
-      "category": "Retro"
-    },
-    {
-      "id": "low-chiclet",
-      "name": "Low Chiclet",
-      "vibe": "Short, soft low-profile keys",
-      "category": "Quiet"
-    },
-    {
-      "id": "silent-linear",
-      "name": "Silent Linear",
-      "vibe": "Muted bottom-out, almost no click",
-      "category": "Quiet"
-    },
-    {
-      "id": "topre-thock",
-      "name": "Topre Thock",
-      "vibe": "Capacitive dome, soft and rounded",
-      "category": "Thock"
-    },
-    {
-      "id": "broadcast-desk",
-      "name": "Broadcast Desk",
-      "vibe": "Tight broadcast studio desk, dry and close",
-      "category": "Mechanical"
-    },
-    {
-      "id": "arcade-micro",
-      "name": "Arcade Micro",
-      "vibe": "Microswitch snap, bright and fast",
-      "category": "Clicky"
-    },
-    {
-      "id": "alu-tkl",
-      "name": "Aluminium TKL",
-      "vibe": "Hollow aluminium ping with a tight case",
-      "category": "Mechanical"
-    },
-    {
-      "id": "gasket-soft",
-      "name": "Gasket Soft",
-      "vibe": "Cushioned gasket mount, soft and low",
-      "category": "Thock"
     }
   ]
 }

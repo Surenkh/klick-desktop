@@ -1,0 +1,53 @@
+{
+  "packs": [
+    {
+      "id": "apple",
+      "brand": "Apple",
+      "name": "Apple Laptop",
+      "vibe": "The typing take as recorded",
+      "category": "Mechanical"
+    },
+    {
+      "id": "cooler-master",
+      "brand": "Cooler Master",
+      "name": "Cooler Master",
+      "vibe": "Cooler Master space bar, full body",
+      "category": "Thock"
+    },
+    {
+      "id": "corsair",
+      "brand": "Corsair",
+      "name": "Corsair",
+      "vibe": "Corsair enter and backspace",
+      "category": "Mechanical"
+    },
+    {
+      "id": "dell",
+      "brand": "Dell",
+      "name": "Dell",
+      "vibe": "Dell backspace and period",
+      "category": "Mechanical"
+    },
+    {
+      "id": "logitech",
+      "brand": "Logitech",
+      "name": "Logitech",
+      "vibe": "Logitech enter, crisp",
+      "category": "Clicky"
+    },
+    {
+      "id": "razer",
+      "brand": "Razer",
+      "name": "Razer",
+      "vibe": "Razer clicks, sharp and fast",
+      "category": "Clicky"
+    },
+    {
+      "id": "studio",
+      "brand": "Studio",
+      "name": "Studio",
+      "vibe": "The full studio take, mixed brands",
+      "category": "Mechanical"
+    }
+  ]
+}
