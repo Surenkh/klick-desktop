@@ -432,6 +432,7 @@ static void mirror_settings(NSDictionary *settings) {
     if (index == NSNotFound) index = 0;
     self.activePack = (int)index;
     audio_select_pack(self.activePack);
+    [self log:@"pack select: wanted=%@ index=%ld of %lu", wanted ?: @"(nil)", (long)index, (unsigned long)self.packNames.count];
     [self rebuildMenu];
     [self log:@"packs loaded: %d, active: %@", count, self.packNames.count ? self.packNames[index] : @"none"];
 }
