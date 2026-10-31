@@ -291,3 +291,7 @@ button.action.danger.final { background: #7c1f27; color: #fff; }
   display: flex; align-items: center; gap: 8px; font-size: 20px; line-height: 1.2;
 }
 #stHat img.hat-mini { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+
+/* three independent volume sliders */
+.volume-group { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.volume-group .row label { width: 132px; }

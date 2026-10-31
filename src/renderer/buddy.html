@@ -59,12 +59,24 @@
       }
       #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
 
+      /* the hat rides inside #char, so press/pop/drift carry it with the head */
       #hat {
-        position: absolute; z-index: 5; pointer-events: none;
-        display: none; transform-origin: 50% 90%;
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .4));
+        position: absolute; left: 43%; top: 24.5%;
+        width: var(--w, 56%); height: auto; z-index: 5; pointer-events: none;
+        transform: translate(-50%, calc(-1 * var(--ay, 74%))) rotate(var(--rot, -5deg)) translateY(var(--dy, 0px));
+        transform-origin: 50% 100%;
+        display: none;
+        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .38));
       }
       #hat.on { display: block; }
+
+      /* per-hat fit: each one hugs the bevel at its own angle */
+      #char[data-hat="beanie"]     #hat { --w: 58%; --ay: 78%; --rot: -6deg; --dy: 1px; }
+      #char[data-hat="baseball"]   #hat { --w: 60%; --ay: 70%; --rot: -9deg; --dy: 0px; }
+      #char[data-hat="explorer"]   #hat { --w: 62%; --ay: 70%; --rot: -7deg; --dy: -1px; }
+      #char[data-hat="wizard"]     #hat { --w: 58%; --ay: 70%; --rot: -5deg; --dy: -5px; }
+      #char[data-hat="graduation"] #hat { --w: 62%; --ay: 70%; --rot: -6deg; --dy: -4px; }
+      #char[data-hat="crown"]      #hat { --w: 52%; --ay: 73%; --rot: -5deg; --dy: 0px; }
 
       #stage {
         position: absolute; inset: 0; display: flex; align-items: center;
@@ -161,11 +173,11 @@
       <div id="celebrate"></div>
       <div id="toast"></div>
       <img id="burst" src="../../assets/buddy/celebrate.png" alt="" />
-      <img id="hat" alt="" />
       <div id="float">
         <div id="char" hidden>
           <img class="klick" id="k0" alt="Kiki" />
           <img class="klick" id="k1" alt="" />
+          <img id="hat" alt="" />
         </div>
       </div>
       <div class="cap" id="cap">
@@ -409,35 +421,27 @@
     let equippedPref = null;
     let autoHat = null;
 
-    const placeHat = () => {
-      const art = HAT_ART[currentHat];
-      const float = document.getElementById('float');
-      if (!art || !float || !hatImg) return;
-      const rect = float.getBoundingClientRect();
-      const size = rect.width * art.ratio * 1.06;
-      hatImg.style.width = `${size}px`;
-      hatImg.style.height = `${size}px`;
-      hatImg.style.left = `${rect.left + rect.width * CHAR_ANCHOR.x - size * art.ax}px`;
-      hatImg.style.top = `${rect.top + rect.height * CHAR_ANCHOR.y - size * art.ay - 3}px`;
-    };
-
-    const applyHat = () => {
-      if (equippedPref === 'none') { currentHat = null; }
-      else if (equippedPref && HAT_ART[equippedPref]) { currentHat = equippedPref; }
-      else { currentHat = (autoHat && HAT_ART[autoHat]) ? autoHat : null; }
-      if (!hatImg) return;
+    const paintHat = () => {
+      const char = document.getElementById('char');
+      if (!char) return;
       if (!currentHat) {
+        char.removeAttribute('data-hat');
         hatImg.classList.remove('on');
         hatImg.removeAttribute('src');
         if (api.debug) api.debug('hat off');
         return;
       }
+      char.setAttribute('data-hat', currentHat);
       hatImg.src = `../../assets/buddy/hats/${HAT_ART[currentHat].file}`;
       hatImg.classList.add('on');
-      placeHat();
-      if (api.debug) {
-        api.debug(`hat ${currentHat} src=${hatImg.getAttribute('src')} w=${hatImg.style.width}`);
-      }
+      if (api.debug) api.debug(`hat ${currentHat}`);
+    };
+
+    const applyHat = () => {
+      if (equippedPref === 'none') currentHat = null;
+      else if (equippedPref && HAT_ART[equippedPref]) currentHat = equippedPref;
+      else currentHat = (autoHat && HAT_ART[autoHat]) ? autoHat : null;
+      paintHat();
     };
 
     if (api.onSettings) api.onSettings((st) => {

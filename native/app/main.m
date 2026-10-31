@@ -93,7 +93,9 @@ static _Atomic bool g_flush_scheduled;
 
 // Mirrors of the few settings the tap thread needs: no ObjC on the hot path.
 static atomic_bool g_enabled;
-static atomic_int g_volume_milli;
+static atomic_int g_tap_milli;
+static atomic_int g_celebration_milli;
+static atomic_int g_system_milli;
 static atomic_bool g_release;
 static _Atomic uint64_t g_last_key_mach;
 
@@ -101,7 +103,7 @@ static _Atomic uint64_t g_last_key_mach;
 static void on_key(uint16_t code, bool down, uint64_t host_time) {
     if (!atomic_load(&g_enabled)) return;
 
-    float gain = (float)atomic_load(&g_volume_milli) / 1000.0f;
+    float gain = (float)atomic_load(&g_tap_milli) / 1000.0f;
     if (gain <= 0.001f) return;
 
     KeyMap m = klick_map_keycode(code);
@@ -137,7 +139,9 @@ static double num(id value, double fallback) {
 
 static void mirror_settings(NSDictionary *settings) {
     atomic_store(&g_enabled, [settings[@"enabled"] boolValue]);
-    atomic_store(&g_volume_milli, (int)lround(num(settings[@"volume"], 0.7) * 1000.0));
+    atomic_store(&g_tap_milli, (int)lround(num(settings[@"tapVolume"], 0.7) * 1000.0));
+    atomic_store(&g_celebration_milli, (int)lround(num(settings[@"celebrationVolume"], 0.7) * 1000.0));
+    atomic_store(&g_system_milli, (int)lround(num(settings[@"systemVolume"], 0.7) * 1000.0));
     atomic_store(&g_release, [settings[@"releaseSounds"] boolValue]);
 }
 
@@ -346,6 +350,9 @@ static void mirror_settings(NSDictionary *settings) {
         @"enabled": @YES,
         @"pack": @"laptop",
         @"volume": @0.7,
+        @"tapVolume": @0.7,
+        @"celebrationVolume": @0.7,
+        @"systemVolume": @0.7,
         @"releaseSounds": @YES,
         @"mouseClicks": @YES,
         @"launchAtLogin": @NO,
@@ -353,7 +360,16 @@ static void mirror_settings(NSDictionary *settings) {
         @"taps": @0,
         @"xp": @0
     } mutableCopy];
-    if (stored) [defaults addEntriesFromDictionary:stored];
+    if (stored) {
+        [defaults addEntriesFromDictionary:stored];
+        // migrate the old single volume once
+        if (!stored[@"tapVolume"]) {
+            NSNumber *legacy = stored[@"volume"] ?: @0.7;
+            defaults[@"tapVolume"] = legacy;
+            defaults[@"celebrationVolume"] = legacy;
+            defaults[@"systemVolume"] = legacy;
+        }
+    }
     // JSON nulls from older builds must never reach a numeric read
     for (NSString *key in [defaults allKeys]) {
         if ([defaults[key] isKindOfClass:[NSNull class]]) [defaults removeObjectForKey:key];
@@ -445,7 +461,7 @@ static void mirror_settings(NSDictionary *settings) {
         NSString *title = [NSString stringWithFormat:@"%.0f%%", level.doubleValue * 100];
         NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:@selector(setVolume:) keyEquivalent:@""];
         item.representedObject = level;
-        item.state = fabs([self.settings[@"volume"] doubleValue] - level.doubleValue) < 0.01 ? NSControlStateValueOn : NSControlStateValueOff;
+        item.state = fabs(num(self.settings[@"tapVolume"], 0.7) - level.doubleValue) < 0.01 ? NSControlStateValueOn : NSControlStateValueOff;
         [volumeMenu addItem:item];
     }
     volumeItem.submenu = volumeMenu;
@@ -495,6 +511,9 @@ static void mirror_settings(NSDictionary *settings) {
 
 - (void)setVolume:(NSMenuItem *)item {
     self.settings[@"volume"] = item.representedObject;
+    self.settings[@"tapVolume"] = item.representedObject;
+    self.settings[@"celebrationVolume"] = item.representedObject;
+    self.settings[@"systemVolume"] = item.representedObject;
     [self rebuildMenu];
     [self saveSettings];
     [self pushSettingsToWeb];
@@ -593,7 +612,7 @@ static void mirror_settings(NSDictionary *settings) {
     if ([line rangeOfString:@"needs-you"].location != NSNotFound) event = @"needs-you";
     else if ([line rangeOfString:@"error"].location != NSNotFound) event = @"error";
 
-    float gain = fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7));
+    float gain = fmaxf(0.02f, (float)atomic_load(&g_system_milli) / 1000.0f);
     if ([event isEqualToString:@"error"]) {
         audio_trigger_cue(1, gain);
         [self buddyMood:@"error"];
@@ -780,7 +799,7 @@ static void mirror_settings(NSDictionary *settings) {
 
     if (milestone > 0) {
         [self log:@"milestone %u taps", milestone];
-        audio_trigger_cue_rate(0, fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7)), 1.18f);
+        audio_trigger_cue_rate(0, fmaxf(0.02f, (float)atomic_load(&g_celebration_milli) / 1000.0f), 1.18f);
         [self buddyMood:@"party"];
     }
 }
@@ -806,7 +825,7 @@ static void mirror_settings(NSDictionary *settings) {
 
     if (milestone > 0) {
         [self log:@"milestone %u taps", milestone];
-        audio_trigger_cue_rate(0, fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7)), 1.18f);
+        audio_trigger_cue_rate(0, fmaxf(0.02f, (float)atomic_load(&g_celebration_milli) / 1000.0f), 1.18f);
         [self buddyMood:@"party"];
     }
 }
@@ -979,9 +998,20 @@ static void mirror_settings(NSDictionary *settings) {
         [self log:@"taps reset to 0"];
         return stats;
     }
+    if ([method isEqualToString:@"previewSound"]) {
+        NSString *kind = args[@"kind"] ?: @"tap";
+        if ([kind isEqualToString:@"celebration"]) {
+            audio_trigger_cue_rate(0, fmaxf(0.02f, (float)atomic_load(&g_celebration_milli) / 1000.0f), 1.18f);
+        } else if ([kind isEqualToString:@"system"]) {
+            audio_trigger_cue(0, fmaxf(0.02f, (float)atomic_load(&g_system_milli) / 1000.0f));
+        } else {
+            audio_trigger(KLICK_ROLE_KEYS, 0, fmaxf(0.02f, (float)atomic_load(&g_tap_milli) / 1000.0f), 1.0f, mach_absolute_time());
+        }
+        return @YES;
+    }
     if ([method isEqualToString:@"demoTap"]) {
         [self log:@"demo tap"];
-        audio_trigger(KLICK_ROLE_KEYS, 0, (float)num(self.settings[@"volume"], 0.7), 1.0f, mach_absolute_time());
+        audio_trigger(KLICK_ROLE_KEYS, 0, fmaxf(0.05f, (float)atomic_load(&g_tap_milli) / 1000.0f), 1.0f, mach_absolute_time());
         atomic_fetch_add(&app_counters.taps, 1);
         return @YES;
     }
@@ -1007,7 +1037,7 @@ static void mirror_settings(NSDictionary *settings) {
         return @YES;
     }
     if ([method isEqualToString:@"slap"]) {
-        float gain = fmaxf(0.35f, (float)num(self.settings[@"volume"], 0.7));
+        float gain = fmaxf(0.05f, (float)atomic_load(&g_tap_milli) / 1000.0f);
         audio_trigger(KLICK_ROLE_KEYS, 0.0f, gain, 0.80f, mach_absolute_time());
         atomic_fetch_add(&app_counters.xp, 10);
         atomic_fetch_add(&app_counters.taps, 1);

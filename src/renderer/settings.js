@@ -10,6 +10,14 @@ const PACK_INFO = {
 const $ = (id) => document.getElementById(id);
 let cfg = null;
 
+const VOLUMES = [
+  ['tapVolume', 'tapVolume', 'tap'],
+  ['celebrationVolume', 'celebrationVolume', 'celebration'],
+  ['systemVolume', 'systemVolume', 'system']
+];
+
+
+
 // --- navigation -------------------------------------------------------------
 document.querySelectorAll('#nav button').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -92,14 +100,27 @@ function renderPacks(packs) {
 function applyToControls() {
   $('enabled').checked = !!cfg.enabled;
   $('enabledLabel').textContent = cfg.enabled ? 'Sounds on' : 'Sounds off';
-  $('volume').value = Math.round(cfg.volume * 100);
-  $('volumeOut').textContent = Math.round(cfg.volume * 100) + '%';
+  for (const [id, key] of VOLUMES) {
+    $(id).value = Math.round((cfg[key] ?? 0.7) * 100);
+    $(id + 'Out').textContent = Math.round((cfg[key] ?? 0.7) * 100) + '%';
+  }
   $('releaseSounds').checked = !!cfg.releaseSounds;
   $('mouseClicks').checked = !!cfg.mouseClicks;
   $('launchAtLogin').checked = !!cfg.launchAtLogin;
   $('buddy').checked = !!cfg.buddy;
   $('quickSounds').checked = !!cfg.enabled;
   $('quickKiki').checked = !!cfg.buddy;
+
+  // the tap-counter preferences live in the buddy view and the Sound view
+  for (const id of ['showTapCounter', 'soundTapCounter']) {
+    if ($(id)) $(id).checked = cfg.showTapCounter !== false;
+  }
+  for (const id of ['celebrateEvery', 'soundCelebrateEvery']) {
+    if ($(id)) $(id).value = String(cfg.celebrateEvery ?? 100);
+  }
+  if (window.klick.debug) {
+    window.klick.debug(`counter toggle sound=${$('soundTapCounter') ? $('soundTapCounter').checked : 'n/a'} cfg=${cfg.showTapCounter}`);
+  }
 }
 
 async function renderAgents() {
@@ -262,13 +283,15 @@ async function boot() {
     cfg = await window.klick.setSettings({ enabled: e.target.checked });
     applyToControls();
   });
-  $('volume').addEventListener('input', (e) => {
-    $('volumeOut').textContent = e.target.value + '%';
-  });
-  $('volume').addEventListener('change', async (e) => {
-    cfg = await window.klick.setSettings({ volume: Number(e.target.value) / 100 });
-    preview(cfg.pack);
-  });
+  for (const [id, key, kind] of VOLUMES) {
+    $(id).addEventListener('input', (e) => {
+      $(id + 'Out').textContent = e.target.value + '%';
+    });
+    $(id).addEventListener('change', async (e) => {
+      cfg = await window.klick.setSettings({ [key]: Number(e.target.value) / 100 });
+      window.klick.previewSound(kind).catch(() => {});
+    });
+  }
   $('quickSounds').addEventListener('change', async (e) => {
     cfg = await window.klick.setSettings({ enabled: e.target.checked });
     applyToControls();

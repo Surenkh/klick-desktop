@@ -77,6 +77,7 @@
     revealLog: () => call('revealLog'),
     onboarded: () => call('onboarded'),
     demoTap: () => call('demoTap'),
+    previewSound: (kind) => call('previewSound', { kind }),
     resetTaps: () => call('resetTaps'),
     demoCue: () => Promise.resolve(false),
     quit: () => call('quit'),

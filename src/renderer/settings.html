@@ -104,10 +104,22 @@
             </label>
           </div>
           <div class="packs" id="packs"></div>
-          <div class="row">
-            <label for="volume">Volume</label>
-            <input type="range" id="volume" min="0" max="100" step="1" />
-            <output id="volumeOut">70%</output>
+          <div class="volume-group">
+            <div class="row">
+              <label for="tapVolume">Key taps</label>
+              <input type="range" id="tapVolume" min="0" max="100" step="1" />
+              <output id="tapVolumeOut">70%</output>
+            </div>
+            <div class="row">
+              <label for="celebrationVolume">Celebrations</label>
+              <input type="range" id="celebrationVolume" min="0" max="100" step="1" />
+              <output id="celebrationVolumeOut">70%</output>
+            </div>
+            <div class="row">
+              <label for="systemVolume">Agent &amp; system cues</label>
+              <input type="range" id="systemVolume" min="0" max="100" step="1" />
+              <output id="systemVolumeOut">70%</output>
+            </div>
           </div>
         </section>
 

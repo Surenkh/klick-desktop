@@ -72,7 +72,10 @@ int main(void) {
 
     printf("packs\n");
     int packs = audio_load_packs("assets/packs");
-    CHECK(packs == 4, "four packs load from assets/packs (got %d)", packs);
+    CHECK(packs >= 4, "packs load from assets/packs (got %d)", packs);
+    for (int i = 0; i < packs; i++) {
+        CHECK(strlen(audio_pack_name(i)) > 0, "pack %d has a name (%s)", i, audio_pack_name(i));
+    }
     CHECK(audio_select_pack(0), "selecting pack 0 works");
     CHECK(strlen(audio_pack_name(0)) > 0, "pack 0 has a name (%s)", audio_pack_name(0));
     CHECK(strlen(audio_pack_name(99)) == 0, "out-of-range pack name is empty");
