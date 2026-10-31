@@ -4,6 +4,20 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.6.0 — in development
+
+- **16 sound packs.** Eleven new character packs synthesised from the reference
+  profiles — Blue Clicky, Creamy Thock, Heavy Tactile, Vintage Typewriter, Low
+  Chiclet, Silent Linear, Topre Thock, Broadcast Desk, Arcade Micro, Aluminium TKL
+  and Gasket Soft — alongside laptop, hard, fast, soft and studio. All MIT, ~3 MB.
+- **Pack library UI**: a two-column card grid with category filters (All, Mechanical,
+  Thock, Clicky, Quiet, Retro), each card showing name, vibe and category, and
+  clicking one switches pack and auditions three keys.
+- **Pack metadata** in `assets/packs/manifest.json` (id, display name, vibe,
+  category), read by the app and used by the menu bar.
+- **Engine**: `MAX_PACKS` raised to 32; tests now load all 16 and confirm every pack
+  produces audio.
+
 ## 0.5.0 — 2026-10-31
 
 - **Hats that actually sit on Kiki's head.** Six level-reward hats (mint beanie,

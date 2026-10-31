@@ -72,7 +72,7 @@ int main(void) {
 
     printf("packs\n");
     int packs = audio_load_packs("assets/packs");
-    CHECK(packs >= 4, "packs load from assets/packs (got %d)", packs);
+    CHECK(packs >= 16, "at least 16 packs load from assets/packs (got %d)", packs);
     for (int i = 0; i < packs; i++) {
         CHECK(strlen(audio_pack_name(i)) > 0, "pack %d has a name (%s)", i, audio_pack_name(i));
     }
@@ -102,6 +102,22 @@ int main(void) {
     memset(buf, 0, sizeof(buf));
     audio_test_mix(buf, 512);
     CHECK(buffer_is_silent(buf, 512), "silence once every voice has finished");
+
+    // every pack must actually make sound when selected
+    printf("pack audition\n");
+    {
+        float probe[256 * 2];
+        int silent = 0;
+        for (int i = 0; i < packs; i++) {
+            audio_select_pack(i);
+            memset(probe, 0, sizeof(probe));
+            audio_trigger(KLICK_ROLE_KEYS, 0.0f, 0.9f, 1.0f, mach_absolute_time());
+            audio_test_mix(probe, 256);
+            if (buffer_is_silent(probe, 256)) { silent++; printf("  silent pack: %s\n", audio_pack_name(i)); }
+        }
+        CHECK(silent == 0, "all %d packs produce audio (silent: %d)", packs, silent);
+        audio_select_pack(0);
+    }
 
     // ---- cues
     printf("cues\n");

@@ -396,17 +396,154 @@ def synth_pack(profiles_json, out_dir):
     print("%d synthesised takes -> %s" % (written, out_dir))
 
 
+# ---------------------------------------------------------------------------
+# Pack library: one acoustic character per pack, all synthesised from the
+# reference profiles. Each entry only changes numbers (pitch, decay, tilt,
+# thock, noise, ring), so every pack is original audio.
+# ---------------------------------------------------------------------------
+
+LIBRARY = [
+    # id, display name, vibe, category, sources, transform
+    dict(id="blue-clicky", name="Blue Clicky", vibe="Sharp buckling click with a plastic snap",
+         category="Clicky", keys="Apple_Typing", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Corsair_Backspace_Hits_02",
+         pitch=1.12, tilt=0.15, decay=0.75, sub=0.6, noise=1.25, ring=0.0),
+    dict(id="creamy-thock", name="Creamy Thock", vibe="Deep PBT thock, rounded and warm",
+         category="Thock", keys="Apple_Typing", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Dell_Backspace_Hits_02",
+         pitch=0.90, tilt=-0.25, decay=1.45, sub=1.6, noise=0.8, ring=0.0),
+    dict(id="heavy-tactile", name="Heavy Tactile", vibe="Heavy bump, long housing ring",
+         category="Mechanical", keys="Apple_Typing", space="Corsair_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Corsair_Backspace_Hits_03",
+         pitch=0.95, tilt=-0.05, decay=1.6, sub=1.2, noise=0.95, ring=0.25),
+    dict(id="vintage-typewriter", name="Vintage Typewriter", vibe="Metal clack with a long mechanical ring",
+         category="Retro", keys="Razer_Period_Hits_02", space="Corsair_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Dell_Backspace_Hits_04",
+         pitch=0.86, tilt=0.1, decay=1.9, sub=0.8, noise=1.1, ring=0.6),
+    dict(id="low-chiclet", name="Low Chiclet", vibe="Short, soft low-profile keys",
+         category="Quiet", keys="Dell_Various_Characters_Single", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Logitech_Enter_Hits_02", delete="Dell_Backspace_Hits_02",
+         pitch=1.25, tilt=0.05, decay=0.6, sub=0.5, noise=1.0, ring=0.0),
+    dict(id="silent-linear", name="Silent Linear", vibe="Muted bottom-out, almost no click",
+         category="Quiet", keys="Dell_Various_Characters_Single", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Logitech_Enter_Hits_02", delete="Dell_Backspace_Hits_02",
+         pitch=1.05, tilt=-0.2, decay=0.8, sub=0.4, noise=0.45, ring=0.0),
+    dict(id="topre-thock", name="Topre Thock", vibe="Capacitive dome, soft and rounded",
+         category="Thock", keys="Apple_Typing", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Dell_Backspace_Hits_02",
+         pitch=0.93, tilt=-0.15, decay=1.3, sub=1.5, noise=0.7, ring=0.0),
+    dict(id="broadcast-desk", name="Broadcast Desk", vibe="Tight broadcast studio desk, dry and close",
+         category="Mechanical", keys="Apple_Typing", space="Corsair_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Corsair_Backspace_Hits_02",
+         pitch=1.10, tilt=0.12, decay=0.7, sub=0.9, noise=1.15, ring=0.1),
+    dict(id="arcade-micro", name="Arcade Micro", vibe="Microswitch snap, bright and fast",
+         category="Clicky", keys="Razer_Period_Hits_02", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Corsair_Enter_Hits_02", delete="Razer_Backspace_Hits_03",
+         pitch=1.38, tilt=0.3, decay=0.5, sub=0.35, noise=1.4, ring=0.3),
+    dict(id="alu-tkl", name="Aluminium TKL", vibe="Hollow aluminium ping with a tight case",
+         category="Mechanical", keys="Apple_Typing", space="Corsair_Space_Bar_Hits_02",
+         enter="Logitech_Enter_Hits_02", delete="Dell_Backspace_Hits_04",
+         pitch=1.0, tilt=0.05, decay=1.2, sub=0.8, noise=1.0, ring=0.75),
+    dict(id="gasket-soft", name="Gasket Soft", vibe="Cushioned gasket mount, soft and low",
+         category="Thock", keys="Apple_Typing", space="Cooler_Master_Space_Bar_Hits_02",
+         enter="Logitech_Enter_Hits_02", delete="Dell_Backspace_Hits_02",
+         pitch=0.88, tilt=-0.3, decay=1.15, sub=1.3, noise=0.55, ring=0.0),
+]
+
+EXISTING = [
+    dict(id="laptop", name="Laptop", vibe="Crisp, light laptop keys", category="Mechanical"),
+    dict(id="hard",   name="Hard",   vibe="Heavy press with more body", category="Thock"),
+    dict(id="fast",   name="Fast",   vibe="Tight and bright, built for speed", category="Clicky"),
+    dict(id="soft",   name="Soft",   vibe="Muffled, quiet, office-safe", category="Quiet"),
+    dict(id="studio", name="Studio", vibe="Neutral studio keys, full take", category="Mechanical"),
+]
+
+
+def _derive(profile, pitch=1.0, tilt=0.0, decay=1.0, sub=1.0, noise=1.0, ring=0.0):
+    import copy
+    p = copy.deepcopy(profile)
+    for peak in p["peaks"]:
+        peak["f"] = max(60.0, peak["f"] * pitch)
+        peak["tau"] = max(4.0, peak["tau"] * decay)
+    p["tilt"] = p["tilt"] + tilt
+    p["sub"] = min(1.5, p["sub"] * sub)
+    p["noise"] = min(0.9, p["noise"] * noise)
+    if ring > 0:
+        # metallic partials: a few long, high resonances
+        base = p["peaks"][0]["f"] if p["peaks"] else 400.0
+        for ratio in (2.4, 3.7, 5.1):
+            p["peaks"].append({"f": base * ratio * pitch, "a": 0.35 * ring,
+                               "bw": 30.0, "tau": 120.0 * ring})
+    return p
+
+
+def build_library(profile_json, out_root):
+    with open(profile_json) as f:
+        raw = json.load(f)
+    # names come from the profiler as "<file>_cut"; strip that suffix
+    profiles = {k.replace("_cut", ""): v for k, v in raw.items()}
+
+    keep = {c["id"] for c in LIBRARY}
+    written = 0
+    for char in LIBRARY:
+        out = os.path.join(out_root, char["id"])
+        os.makedirs(out, exist_ok=True)
+        for name in os.listdir(out):
+            if name.endswith(".wav"):
+                os.remove(os.path.join(out, name))
+
+        keys_src = profiles.get(char["keys"])
+        if not keys_src:
+            print("  ! missing keys source for", char["id"], char["keys"]); continue
+
+        # six takes, each a little different
+        for take in range(1, 7):
+            p = _derive(keys_src, char["pitch"], char["tilt"], char["decay"],
+                        char["sub"], char["noise"], char["ring"])
+            p["dur_ms"] = min(220.0, max(140.0, p["dur_ms"] * 0.8))
+            samples = synth_take(p, seed=hash((char["id"], take)) & 0xffff, peak=0.89)
+            _write(os.path.join(out, "keys-%d.wav" % take), samples)
+            written += 1
+
+        for role, src_key in (("space", "space"), ("enter", "enter"), ("delete", "delete")):
+            src = profiles.get(char[src_key])
+            if not src:
+                continue
+            p = _derive(src, char["pitch"], char["tilt"], char["decay"],
+                        char["sub"], char["noise"], char["ring"])
+            p["dur_ms"] = {"space": 320, "enter": 300, "delete": 260}[role]
+            samples = synth_take(p, seed=hash((char["id"], role)) & 0xffff, peak=0.89)
+            _write(os.path.join(out, role + "-1.wav"), samples)
+            written += 1
+        print("  %-20s %s" % (char["id"], char["name"]))
+
+    manifest = {"packs": EXISTING + [{k: c[k] for k in ("id", "name", "vibe", "category")} for c in LIBRARY]}
+    with open(os.path.join(out_root, "manifest.json"), "w") as f:
+        json.dump(manifest, f, indent=2)
+    print("%d samples across %d synthesised packs" % (written, len(keep)))
+
+
+def _write(path, samples):
+    with wave.open(path, "w") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+        w.writeframes((np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes())
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Klick sound synthesis")
     parser.add_argument("--profile", metavar="DIR", help="measure reference takes in DIR")
     parser.add_argument("--write", metavar="JSON", help="where to store the profile")
     parser.add_argument("--synth", metavar="JSON", help="resynthesise a pack from a profile")
     parser.add_argument("--out", metavar="DIR", help="output pack directory for --synth")
+    parser.add_argument("--library", metavar="JSON", help="build every character pack from a profile")
+    parser.add_argument("--root", metavar="DIR", help="packs root for --library (default assets/packs)")
     args = parser.parse_args()
 
     if args.profile:
         profile_takes(args.profile, args.write or "scripts/studio-profile.json")
     elif args.synth:
         synth_pack(args.synth, args.out or "assets/packs/studio")
+    elif args.library:
+        build_library(args.library, args.root or "assets/packs")
     else:
         main()

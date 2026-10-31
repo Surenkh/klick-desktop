@@ -81,17 +81,52 @@ async function preview(pack) {
 }
 
 // --- rendering --------------------------------------------------------------
+let PACK_LIST = [];
+let PACK_FILTER = 'All';
+
+const PACK_CATEGORIES = ['All', 'Mechanical', 'Thock', 'Clicky', 'Quiet', 'Retro'];
+
+function renderPackFilters() {
+  const host = $('packFilters');
+  if (!host) return;
+  host.innerHTML = '';
+  for (const category of PACK_CATEGORIES) {
+    const pill = document.createElement('button');
+    pill.className = 'filter-pill' + (PACK_FILTER === category ? ' active' : '');
+    pill.textContent = category;
+    pill.addEventListener('click', () => {
+      PACK_FILTER = category;
+      renderPackFilters();
+      renderPacks(PACK_LIST);
+    });
+    host.appendChild(pill);
+  }
+}
+
 function renderPacks(packs) {
+  if (Array.isArray(packs) && packs.length && typeof packs[0] === 'string') {
+    packs = packs.map((id) => ({ id, name: id, vibe: '', category: 'Mechanical' }));
+  }
+  if (Array.isArray(packs) && packs.length) PACK_LIST = packs;
+
   const host = $('packs');
   host.innerHTML = '';
-  for (const pack of packs) {
+  renderPackFilters();
+
+  const visible = PACK_LIST.filter((p) => PACK_FILTER === 'All' || p.category === PACK_FILTER);
+  for (const pack of visible) {
     const btn = document.createElement('button');
-    btn.className = 'pack' + (cfg.pack === pack ? ' active' : '');
-    btn.innerHTML = `<b>${pack}</b><span>${PACK_INFO[pack] || 'Keyboard sounds'}</span>`;
+    const active = cfg.pack === pack.id;
+    btn.className = 'pack' + (active ? ' active' : '');
+    btn.innerHTML =
+      `<b>${pack.name || pack.id}</b>` +
+      `<span>${pack.vibe || ''}</span>` +
+      `<em>${pack.category || ''}</em>`;
     btn.addEventListener('click', async () => {
-      await window.klick.setSettings({ pack });
-      host.querySelectorAll('.pack').forEach((p) => p.classList.toggle('active', p === btn));
-      preview(pack);
+      cfg = await window.klick.setSettings({ pack: pack.id });
+      renderPacks(PACK_LIST);
+      // audition: three quick keys so packs can be compared by ear
+      if (window.klick.audition) window.klick.audition(pack.id).catch(() => {});
     });
     host.appendChild(btn);
   }

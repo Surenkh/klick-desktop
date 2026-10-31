@@ -62,6 +62,7 @@
     getSettings: () => call('getSettings'),
     setSettings: (patch) => call('setSettings', { patch }),
     packs: () => call('packs'),
+    audition: (pack) => call('audition', { pack }),
     samples: (pack) => call('samples', { pack }),
     cueSamples: () => call('cueSamples'),
     agents: () => call('agents'),

@@ -1,110 +1,100 @@
 {
-  "laptop": {
-    "space": [
-      "space-1.wav"
-    ],
-    "enter": [
-      "enter-1.wav"
-    ],
-    "delete": [
-      "delete-1.wav"
-    ],
-    "modifier": [
-      "modifier-1.wav"
-    ],
-    "release": [
-      "release-1.wav"
-    ],
-    "click": [
-      "click-1.wav"
-    ],
-    "keys": [
-      "keys-1.wav",
-      "keys-2.wav",
-      "keys-3.wav",
-      "keys-4.wav",
-      "keys-5.wav"
-    ]
-  },
-  "hard": {
-    "space": [
-      "space-1.wav"
-    ],
-    "enter": [
-      "enter-1.wav"
-    ],
-    "delete": [
-      "delete-1.wav"
-    ],
-    "modifier": [
-      "modifier-1.wav"
-    ],
-    "release": [
-      "release-1.wav"
-    ],
-    "click": [
-      "click-1.wav"
-    ],
-    "keys": [
-      "keys-1.wav",
-      "keys-2.wav",
-      "keys-3.wav",
-      "keys-4.wav",
-      "keys-5.wav"
-    ]
-  },
-  "fast": {
-    "space": [
-      "space-1.wav"
-    ],
-    "enter": [
-      "enter-1.wav"
-    ],
-    "delete": [
-      "delete-1.wav"
-    ],
-    "modifier": [
-      "modifier-1.wav"
-    ],
-    "release": [
-      "release-1.wav"
-    ],
-    "click": [
-      "click-1.wav"
-    ],
-    "keys": [
-      "keys-1.wav",
-      "keys-2.wav",
-      "keys-3.wav",
-      "keys-4.wav",
-      "keys-5.wav"
-    ]
-  },
-  "soft": {
-    "space": [
-      "space-1.wav"
-    ],
-    "enter": [
-      "enter-1.wav"
-    ],
-    "delete": [
-      "delete-1.wav"
-    ],
-    "modifier": [
-      "modifier-1.wav"
-    ],
-    "release": [
-      "release-1.wav"
-    ],
-    "click": [
-      "click-1.wav"
-    ],
-    "keys": [
-      "keys-1.wav",
-      "keys-2.wav",
-      "keys-3.wav",
-      "keys-4.wav",
-      "keys-5.wav"
-    ]
-  }
+  "packs": [
+    {
+      "id": "laptop",
+      "name": "Laptop",
+      "vibe": "Crisp, light laptop keys",
+      "category": "Mechanical"
+    },
+    {
+      "id": "hard",
+      "name": "Hard",
+      "vibe": "Heavy press with more body",
+      "category": "Thock"
+    },
+    {
+      "id": "fast",
+      "name": "Fast",
+      "vibe": "Tight and bright, built for speed",
+      "category": "Clicky"
+    },
+    {
+      "id": "soft",
+      "name": "Soft",
+      "vibe": "Muffled, quiet, office-safe",
+      "category": "Quiet"
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "vibe": "Neutral studio keys, full take",
+      "category": "Mechanical"
+    },
+    {
+      "id": "blue-clicky",
+      "name": "Blue Clicky",
+      "vibe": "Sharp buckling click with a plastic snap",
+      "category": "Clicky"
+    },
+    {
+      "id": "creamy-thock",
+      "name": "Creamy Thock",
+      "vibe": "Deep PBT thock, rounded and warm",
+      "category": "Thock"
+    },
+    {
+      "id": "heavy-tactile",
+      "name": "Heavy Tactile",
+      "vibe": "Heavy bump, long housing ring",
+      "category": "Mechanical"
+    },
+    {
+      "id": "vintage-typewriter",
+      "name": "Vintage Typewriter",
+      "vibe": "Metal clack with a long mechanical ring",
+      "category": "Retro"
+    },
+    {
+      "id": "low-chiclet",
+      "name": "Low Chiclet",
+      "vibe": "Short, soft low-profile keys",
+      "category": "Quiet"
+    },
+    {
+      "id": "silent-linear",
+      "name": "Silent Linear",
+      "vibe": "Muted bottom-out, almost no click",
+      "category": "Quiet"
+    },
+    {
+      "id": "topre-thock",
+      "name": "Topre Thock",
+      "vibe": "Capacitive dome, soft and rounded",
+      "category": "Thock"
+    },
+    {
+      "id": "broadcast-desk",
+      "name": "Broadcast Desk",
+      "vibe": "Tight broadcast studio desk, dry and close",
+      "category": "Mechanical"
+    },
+    {
+      "id": "arcade-micro",
+      "name": "Arcade Micro",
+      "vibe": "Microswitch snap, bright and fast",
+      "category": "Clicky"
+    },
+    {
+      "id": "alu-tkl",
+      "name": "Aluminium TKL",
+      "vibe": "Hollow aluminium ping with a tight case",
+      "category": "Mechanical"
+    },
+    {
+      "id": "gasket-soft",
+      "name": "Gasket Soft",
+      "vibe": "Cushioned gasket mount, soft and low",
+      "category": "Thock"
+    }
+  ]
 }

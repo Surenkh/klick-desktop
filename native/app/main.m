@@ -34,6 +34,7 @@ static const char *kBundleID = "app.klick.Klick";
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) NSMutableDictionary *settings;
 @property (nonatomic, strong) NSMutableArray<NSString *> *packNames;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSDictionary *> *packMeta;
 @property (nonatomic, strong) NSString *packsDir;
 @property (nonatomic, strong) NSString *logPath;
 @property (nonatomic, assign) int activePack;
@@ -151,11 +152,13 @@ static void mirror_settings(NSDictionary *settings) {
     gApp = self;
 
     self.packNames = [NSMutableArray array];
+    self.packMeta = [NSMutableDictionary dictionary];
     self.logPath = [self supportPath:@"klick.log"];
     [self loadSettings];
     [self setupStatusItem];
 
     self.packsDir = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"assets/packs"];
+    [self loadPackManifest];
 
     BOOL audioOK = audio_init();
     [self log:@"audio init ok=%d initStatus=%d startStatus=%d running=%d rate=%.0f",
@@ -401,6 +404,22 @@ static void mirror_settings(NSDictionary *settings) {
 
 // ------------------------------------------------------------------ audio
 
+- (void)loadPackManifest {
+    NSString *path = [self.packsDir stringByAppendingPathComponent:@"manifest.json"];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (!data) return;
+    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    for (NSDictionary *pack in json[@"packs"] ?: @[]) {
+        if (pack[@"id"]) self.packMeta[pack[@"id"]] = pack;
+    }
+    [self log:@"pack manifest: %lu entries", (unsigned long)self.packMeta.count];
+}
+
+- (NSString *)displayNameForPack:(NSString *)packId {
+    NSDictionary *meta = self.packMeta[packId];
+    return meta[@"name"] ?: [packId capitalizedString];
+}
+
 - (void)reloadPacks {
     int count = audio_load_packs(self.packsDir.UTF8String);
     [self.packNames removeAllObjects];
@@ -470,7 +489,7 @@ static void mirror_settings(NSDictionary *settings) {
     NSMenuItem *packItem = [[NSMenuItem alloc] initWithTitle:@"Sound" action:nil keyEquivalent:@""];
     NSMenu *packMenu = [[NSMenu alloc] init];
     [self.packNames enumerateObjectsUsingBlock:^(NSString *name, NSUInteger index, BOOL *stop) {
-        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:name.capitalizedString
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:[self displayNameForPack:name]
                                                      action:@selector(selectPack:) keyEquivalent:@""];
         item.tag = (NSInteger)index;
         item.state = ((int)index == self.activePack) ? NSControlStateValueOn : NSControlStateValueOff;
@@ -963,7 +982,34 @@ static void mirror_settings(NSDictionary *settings) {
         return @{ @"baseMs": @(deviceMs), @"outputMs": @0,
                   @"handlingMs": @(audio_latency_ms()), @"state": @"running" };
     }
-    if ([method isEqualToString:@"packs"]) return self.packNames;
+    if ([method isEqualToString:@"packs"]) {
+        NSMutableArray *list = [NSMutableArray array];
+        for (NSString *packId in self.packNames) {
+            NSDictionary *meta = self.packMeta[packId];
+            [list addObject:@{
+                @"id": packId,
+                @"name": meta[@"name"] ?: [packId capitalizedString],
+                @"vibe": meta[@"vibe"] ?: @"",
+                @"category": meta[@"category"] ?: @"Mechanical"
+            }];
+        }
+        return list;
+    }
+    if ([method isEqualToString:@"audition"]) {
+        NSString *packId = args[@"pack"] ?: nil;
+        if (packId) {
+            NSUInteger index = [self.packNames indexOfObject:packId];
+            if (index != NSNotFound) { self.activePack = (int)index; audio_select_pack(self.activePack); }
+        }
+        float gain = fmaxf(0.05f, (float)atomic_load(&g_tap_milli) / 1000.0f);
+        for (int i = 0; i < 3; i++) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(i * 0.13 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                audio_trigger(i == 2 ? KLICK_ROLE_SPACE : KLICK_ROLE_KEYS, 0, gain, 1.0f, mach_absolute_time());
+            });
+        }
+        return @YES;
+    }
     if ([method isEqualToString:@"stats"]) {
         return @{ @"taps": @(atomic_load(&app_counters.taps)), @"xp": @(atomic_load(&app_counters.xp)),
                   @"slaps": @0, @"level": @1, @"hat": [NSNull null], @"day": @"" };

@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <dirent.h>
 
-#define MAX_PACKS 8
+#define MAX_PACKS 32
 #define MAX_TAKES 6
 #define MAX_VOICES 48
 #define RING_SIZE 256
