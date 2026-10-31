@@ -204,5 +204,209 @@ def main():
     print("\n%d samples written across %d packs (all synthesised)" % (total, len(PACKS)))
 
 
+# ---------------------------------------------------------------------------
+# Studio profile: measure eight reference takes, then resynthesise the pack
+# from those measurements. The result contains no audio from the references --
+# only numbers (frequencies, decays, tilt) drive our own synthesis.
+# ---------------------------------------------------------------------------
+
+def _load_wav(path):
+    with wave.open(path) as w:
+        sr = w.getframerate()
+        raw = w.readframes(w.getnframes())
+    data = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+    return data, sr
+
+
+def _envelope(data, sr, hop_ms=1.0):
+    hop = max(1, int(sr * hop_ms / 1000.0))
+    frames = max(1, len(data) // hop)
+    return np.array([np.sqrt(np.mean(data[i * hop:(i + 1) * hop] ** 2))
+                     for i in range(frames)])
+
+
+def _spectral_peaks(data, sr, count=8):
+    n = 1 << 14
+    seg = data[:min(len(data), int(sr * 0.06))]
+    if len(seg) < 64:
+        return []
+    window = np.hanning(len(seg))
+    spectrum = np.abs(np.fft.rfft(seg * window, n=n))
+    freqs = np.fft.rfftfreq(n, 1.0 / sr)
+    spectrum /= (spectrum.max() or 1.0)
+
+    peaks = []
+    for i in range(2, len(spectrum) - 2):
+        if not (spectrum[i] > spectrum[i - 1] and spectrum[i] >= spectrum[i + 1]):
+            continue
+        if spectrum[i] < 0.04 or freqs[i] < 80 or freqs[i] > 12000:
+            continue
+        # -6 dB width around the peak
+        j = i
+        while j > 0 and spectrum[j] > spectrum[i] * 0.5: j -= 1
+        k = i
+        while k < len(spectrum) - 1 and spectrum[k] > spectrum[i] * 0.5: k += 1
+        bw = max(20.0, freqs[k] - freqs[j])
+        peaks.append({"f": float(freqs[i]), "a": float(spectrum[i]), "bw": float(bw)})
+    peaks.sort(key=lambda p: -p["a"])
+
+    kept = []
+    for p in peaks:
+        if all(abs(p["f"] - q["f"]) > 25 for q in kept):
+            kept.append(p)
+        if len(kept) >= count:
+            break
+    for p in kept:
+        # higher partials ring out faster
+        p["tau"] = float(np.clip(900.0 / (1.0 + p["f"] / 900.0), 8.0, 120.0))
+    return kept
+
+
+def profile_takes(directory, out_json):
+    """Measure every take and store the acoustics as numbers, not audio."""
+    profiles = {}
+    for name in sorted(os.listdir(directory)):
+        if not name.endswith(".wav"):
+            continue
+        data, sr = _load_wav(os.path.join(directory, name))
+        if len(data) == 0:
+            continue
+        idx = np.argmax(np.abs(data) > np.max(np.abs(data)) * 0.05)
+        data = data[max(0, idx - int(sr * 0.002)):]
+
+        env = _envelope(data, sr)
+        peak = float(env.max()) or 1.0
+        attack_ms = float((np.argmax(env) + 1))
+        below = np.where(env < peak * 0.1)[0]
+        decay_ms = float(below[0] if len(below) else len(env))
+
+        spectrum = np.abs(np.fft.rfft(data, n=1 << 14))
+        freqs = np.fft.rfftfreq(1 << 14, 1.0 / sr)
+        band = (freqs > 200) & (freqs < 8000)
+        tilt = float(np.polyfit(np.log10(freqs[band]), np.log10(spectrum[band] + 1e-9), 1)[0]) \
+            if band.sum() > 8 else -1.0
+
+        total = float(np.sum(spectrum ** 2)) or 1.0
+        sub = float(np.sum(spectrum[freqs < 120] ** 2) / total)
+        sub_f = float(freqs[np.argmax(spectrum[freqs < 120])]) if (freqs < 120).any() else 60.0
+
+        onset = data[:int(sr * 0.01)]
+        noise = float(np.std(onset) / (np.max(np.abs(onset)) or 1.0))
+
+        edges = np.logspace(np.log10(80.0), np.log10(16000.0), 33)
+        bands = []
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            sel = (freqs >= lo) & (freqs < hi)
+            bands.append(float(np.mean(spectrum[sel])) if sel.any() else 0.0)
+        top = max(bands) or 1.0
+        bands = [round(b / top, 4) for b in bands]
+
+        profiles[name[:-4]] = {
+            "dur_ms": round(1000.0 * len(data) / sr, 1),
+            "attack_ms": round(attack_ms, 1),
+            "decay_ms": round(decay_ms, 1),
+            "tilt": round(tilt, 3),
+            "sub": round(min(1.0, sub * 8.0), 3),
+            "sub_hz": round(max(40.0, min(110.0, sub_f)), 1),
+            "noise": round(min(0.7, max(0.05, noise * 2.5)), 3),
+            "noise_tau_ms": round(max(6.0, decay_ms * 0.35), 1),
+            "centroid_hz": round(float(np.sum(freqs * spectrum ** 2) / total), 1),
+            "bands": bands,
+            "peaks": _spectral_peaks(data, sr),
+        }
+        print("  profiled %-12s %5.0f ms  peaks %d  centroid %4.0f Hz" % (
+            name, profiles[name[:-4]]["dur_ms"], len(profiles[name[:-4]]["peaks"]),
+            profiles[name[:-4]]["centroid_hz"]))
+
+    with open(out_json, "w") as f:
+        json.dump(profiles, f, indent=2)
+    print("wrote %s (%d takes)" % (out_json, len(profiles)))
+    return profiles
+
+
+def synth_take(profile, seed, peak=0.89):
+    """Modal + noise resynthesis. Fresh audio, driven only by measured numbers."""
+    rng = np.random.default_rng(seed)
+    n = max(64, int(SR * profile["dur_ms"] / 1000.0))
+    t = np.arange(n) / float(SR)
+    out = np.zeros(n)
+
+    for p in profile["peaks"]:
+        f = p["f"] * (1.0 + rng.normal(0, 0.004))
+        amp = p["a"] * rng.uniform(0.85, 1.15)
+        tau = max(0.004, p["tau"] / 1000.0)
+        out += amp * np.exp(-t / tau) * np.sin(2 * np.pi * f * t + rng.uniform(0, 2 * np.pi))
+
+    noise = rng.normal(0.0, 1.0, n)
+    spectrum = np.fft.rfft(noise)
+    freqs = np.fft.rfftfreq(n, 1.0 / SR)
+    shape = np.zeros_like(freqs)
+    band = freqs > 120
+    shape[band] = (freqs[band] / 1000.0) ** profile["tilt"]
+    shape[freqs > 12000] = 0.0
+    noise = np.fft.irfft(spectrum * shape, n)
+    noise /= (np.max(np.abs(noise)) or 1.0)
+    out += noise * profile["noise"] * np.exp(-t / max(0.004, profile["noise_tau_ms"] / 1000.0))
+
+    out += profile["sub"] * np.exp(-t / 0.035) * np.sin(2 * np.pi * profile["sub_hz"] * t)
+
+    # match the reference's broad spectral envelope (numbers, not samples)
+    if profile.get("bands"):
+        spectrum = np.fft.rfft(out)
+        freqs = np.fft.rfftfreq(n, 1.0 / SR)
+        edges = np.logspace(np.log10(80.0), np.log10(16000.0), 33)
+        scale = np.zeros_like(freqs)
+        for lo, hi, gain in zip(edges[:-1], edges[1:], profile["bands"]):
+            sel = (freqs >= lo) & (freqs < hi)
+            if not sel.any():
+                continue
+            have = float(np.sqrt(np.mean(np.abs(spectrum[sel]) ** 2)))
+            scale[sel] = gain / (have + 1e-9)
+        out = np.fft.irfft(spectrum * scale, n)
+
+    attack = max(1, int(SR * 0.0006))
+    out[:attack] *= np.linspace(0, 1, attack)
+    fade = max(1, int(SR * 0.003))
+    if len(out) > 2 * fade:
+        out[-fade:] *= np.linspace(1, 0, fade)
+    out *= peak / (np.max(np.abs(out)) or 1.0)
+    return out
+
+
+def synth_pack(profiles_json, out_dir):
+    with open(profiles_json) as f:
+        profiles = json.load(f)
+    os.makedirs(out_dir, exist_ok=True)
+    for name in os.listdir(out_dir):
+        if name.endswith(".wav"):
+            os.remove(os.path.join(out_dir, name))
+
+    written = 0
+    for i, (name, profile) in enumerate(sorted(profiles.items())):
+        samples = synth_take(profile, seed=1000 + i)
+        path = os.path.join(out_dir, name + ".wav")
+        with wave.open(path, "w") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(SR)
+            w.writeframes((np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes())
+        written += 1
+        print("  %-12s %5.0f ms  peak %.2f" % (name, 1000.0 * len(samples) / SR,
+                                               float(np.max(np.abs(samples)))))
+    print("%d synthesised takes -> %s" % (written, out_dir))
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Klick sound synthesis")
+    parser.add_argument("--profile", metavar="DIR", help="measure reference takes in DIR")
+    parser.add_argument("--write", metavar="JSON", help="where to store the profile")
+    parser.add_argument("--synth", metavar="JSON", help="resynthesise a pack from a profile")
+    parser.add_argument("--out", metavar="DIR", help="output pack directory for --synth")
+    args = parser.parse_args()
+
+    if args.profile:
+        profile_takes(args.profile, args.write or "scripts/studio-profile.json")
+    elif args.synth:
+        synth_pack(args.synth, args.out or "assets/packs/studio")
+    else:
+        main()

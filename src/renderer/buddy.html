@@ -61,7 +61,7 @@
 
       /* the hat rides inside #char, so press/pop/drift carry it with the head */
       #hat {
-        position: absolute; left: 43%; top: 24.5%;
+        position: absolute; left: 52%; top: calc(24.5% + 5px);
         width: var(--w, 56%); height: auto; z-index: 5; pointer-events: none;
         transform: translate(-50%, calc(-1 * var(--ay, 74%))) rotate(var(--rot, -5deg)) translateY(var(--dy, 0px));
         transform-origin: 50% 100%;
@@ -71,12 +71,12 @@
       #hat.on { display: block; }
 
       /* per-hat fit: each one hugs the bevel at its own angle */
-      #char[data-hat="beanie"]     #hat { --w: 58%; --ay: 78%; --rot: -6deg; --dy: 1px; }
-      #char[data-hat="baseball"]   #hat { --w: 60%; --ay: 70%; --rot: -9deg; --dy: 0px; }
-      #char[data-hat="explorer"]   #hat { --w: 62%; --ay: 70%; --rot: -7deg; --dy: -1px; }
-      #char[data-hat="wizard"]     #hat { --w: 58%; --ay: 70%; --rot: -5deg; --dy: -5px; }
-      #char[data-hat="graduation"] #hat { --w: 62%; --ay: 70%; --rot: -6deg; --dy: -4px; }
-      #char[data-hat="crown"]      #hat { --w: 52%; --ay: 73%; --rot: -5deg; --dy: 0px; }
+      #char[data-hat="beanie"]     #hat { --w: 58%; --ay: 78%; --rot: -2deg; --dy: 2px; }
+      #char[data-hat="baseball"]   #hat { --w: 60%; --ay: 70%; --rot: -3deg; --dy: 2px; }
+      #char[data-hat="explorer"]   #hat { --w: 62%; --ay: 70%; --rot: -2deg; --dy: 1px; }
+      #char[data-hat="wizard"]     #hat { --w: 58%; --ay: 70%; --rot: -2deg; --dy: -1px; }
+      #char[data-hat="graduation"] #hat { --w: 62%; --ay: 70%; --rot: -2deg; --dy: 0px; }
+      #char[data-hat="crown"]      #hat { --w: 52%; --ay: 73%; --rot: -2deg; --dy: 2px; }
 
       #stage {
         position: absolute; inset: 0; display: flex; align-items: center;
