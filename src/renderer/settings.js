@@ -137,12 +137,90 @@ async function renderAgents() {
   }
 }
 
+  // ---- gamification: XP curve, progress and wardrobe ------------------------
+  const HATS = [
+    { level: 2,  id: 'party',      name: 'Party',      glyph: '🎉' },
+    { level: 4,  id: 'sunglasses', name: 'Sunglasses', glyph: '😎' },
+    { level: 6,  id: 'headphones', name: 'Headphones', glyph: '🎧' },
+    { level: 8,  id: 'beanie',     name: 'Beanie',     glyph: '🧶' },
+    { level: 10, id: 'chef',       name: 'Chef',       glyph: '👨‍🍳' },
+    { level: 15, id: 'crown',      name: 'Crown',      glyph: '👑' }
+  ];
+  const HAT_BY_LEVEL = (lvl) => HATS.find((h) => h.level === lvl) || null;
+  const HAT_BY_ID = (id) => HATS.find((h) => h.id === id) || null;
+  // start XP of level L is 60 * L * (L - 1); mirrors klick_level_for in C
+  const levelStart = (lvl) => 60 * lvl * (lvl - 1);
+
+  let latestStats = { taps: 0, xp: 0, level: 1, hat: null, equipped: null };
+
+  const paintStats = (stats) => {
+    latestStats = { ...latestStats, ...stats };
+    const { taps, xp, level } = latestStats;
+    $('stTaps').textContent = taps ?? 0;
+    $('stXp').textContent = xp ?? 0;
+    $('stLevel').textContent = level ?? 1;
+
+    const autoHat = HAT_BY_ID(latestStats.hat) || HAT_BY_LEVEL(level);
+    const worn = HAT_BY_ID(latestStats.equipped) || autoHat;
+    if ($('stHat')) {
+      $('stHat').textContent = worn ? `${worn.glyph} ${worn.name}` : '—';
+      $('stHat').classList.toggle('with-hat', !!worn);
+    }
+
+    const start = levelStart(level);
+    const next = levelStart(level + 1);
+    const span = Math.max(1, next - start);
+    const into = Math.max(0, Math.min(span, xp - start));
+    $('levelBadge').textContent = `LEVEL ${level}`;
+    $('xpCount').textContent = `${xp.toLocaleString('en-US')} / ${next.toLocaleString('en-US')} XP`;
+    $('xpFill').style.width = `${Math.round((into / span) * 1000) / 10}%`;
+
+    const nextHat = HATS.find((h) => h.level > level);
+    const remaining = Math.max(0, next - xp);
+    $('xpNext').textContent = nextHat
+      ? `${remaining.toLocaleString('en-US')} XP to Level ${level + 1} — ${nextHat.name} hat`
+      : 'Every hat unlocked. Enjoy the crown.';
+
+    paintWardrobe();
+  };
+
+  const paintWardrobe = () => {
+    const host = $('wardrobe');
+    if (!host) return;
+    const level = latestStats.level || 1;
+    const wornId = (HAT_BY_ID(latestStats.equipped) || HAT_BY_ID(latestStats.hat) || HAT_BY_LEVEL(level) || {}).id;
+    host.innerHTML = '';
+    for (const hat of HATS) {
+      const unlocked = level >= hat.level;
+      const equipped = unlocked && hat.id === wornId;
+      const el = document.createElement('button');
+      el.className = `hat ${unlocked ? 'unlocked' : 'locked'}${equipped ? ' equipped' : ''}`;
+      el.disabled = !unlocked;
+      el.innerHTML =
+        `<span class="glyph">${unlocked ? hat.glyph : '🔒'}</span>` +
+        `<span class="name">${hat.name}</span>` +
+        `<span class="need">${unlocked ? (equipped ? 'wearing' : `Lv ${hat.level}`) : `Lv ${hat.level}`}</span>`;
+      if (unlocked) {
+        el.addEventListener('click', async () => {
+          cfg = await window.klick.setSettings({ equippedHat: hat.id });
+          paintStats({ equipped: hat.id });
+        });
+      }
+      host.appendChild(el);
+    }
+  };
+
+  window.klick.onStats((s) => {
+    paintStats(s);
+    if (window.klick.debug && window.__lastStatsTap !== s.taps) {
+      window.__lastStatsTap = s.taps;
+      window.klick.debug(`stats-dom taps=${$('stTaps').textContent} xp=${$('stXp').textContent} level=${$('stLevel').textContent}`);
+    }
+  });
+
 async function renderStats() {
-  const s = await window.klick.stats();
-  $('stTaps').textContent = s.taps || 0;
-  $('stXp').textContent = s.xp || 0;
-  $('stLevel').textContent = s.level || 1;
-  $('stHat').textContent = s.hat || '—';
+  const stats = await window.klick.stats();
+  if (stats) paintStats(stats);
 }
 
 // --- wiring -----------------------------------------------------------------
@@ -259,16 +337,7 @@ async function boot() {
   $('revealLog').addEventListener('click', () => window.klick.revealLog());
   $('quit').addEventListener('click', () => window.klick.quit());
 
-  window.klick.onStats((s) => {
-    $('stTaps').textContent = s.taps ?? 0;
-    $('stXp').textContent = s.xp ?? 0;
-    $('stLevel').textContent = s.level ?? 1;
-    if (s.hat !== undefined && $('stHat')) $('stHat').textContent = s.hat || 'none';
-    if (window.klick.debug && window.__lastStatsTap !== s.taps) {
-      window.__lastStatsTap = s.taps;
-      window.klick.debug(`stats-dom taps=${$('stTaps').textContent} xp=${$('stXp').textContent} level=${$('stLevel').textContent}`);
-    }
-  });
+
   // ---- first run -----------------------------------------------------------
   const overlay = $('onboarding');
   // never trap the user: hide first, persist second

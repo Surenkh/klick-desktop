@@ -10,12 +10,16 @@
     font-family: -apple-system, system-ui, sans-serif;
   }
   #pill {
-    position: absolute; inset: 0; display: flex; flex-direction: column;
+    position: absolute; inset: 0; box-sizing: border-box;
+    display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 7px;
-    border-radius: 14px; background: rgba(10, 16, 14, .9);
+    min-width: 88px; border-radius: 10px;              /* fixed px, never % */
+    background: rgba(10, 16, 14, .9);
     border: 1px solid rgba(141, 234, 193, .6);
     box-shadow: 0 6px 18px rgba(0, 0, 0, .45);
     -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    font-variant-numeric: tabular-nums;
+    transform: none;                                   /* nothing scales this box */
   }
   #value {
     color: #fff; font-size: 17px; font-weight: 700; line-height: 1;
@@ -25,8 +29,13 @@
     color: rgba(141, 234, 193, .8); font-size: 8.5px; font-weight: 600;
     letter-spacing: .7px; text-transform: uppercase;
   }
-  #pill.celebrate { animation: pop 420ms cubic-bezier(.2, .9, .3, 1.4); }
-  @keyframes pop { 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  /* celebrate with light, never with scale: the geometry must stay rigid */
+  #pill.celebrate { animation: glow 520ms ease; }
+  @keyframes glow {
+    0%   { border-color: rgba(141, 234, 193, .6); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+    35%  { border-color: rgba(141, 234, 193, 1); box-shadow: 0 0 0 2px rgba(141, 234, 193, .35), 0 6px 18px rgba(0, 0, 0, .45); }
+    100% { border-color: rgba(141, 234, 193, .6); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+  }
 </style>
 </head>
 <body>

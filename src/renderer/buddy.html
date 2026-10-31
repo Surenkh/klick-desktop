@@ -59,6 +59,14 @@
       }
       #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
 
+      #hatBadge {
+        position: absolute; left: 50%; top: 2px; transform: translateX(-50%);
+        font-size: 26px; line-height: 1; pointer-events: none; z-index: 4;
+        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .45));
+        opacity: 0; transition: opacity 160ms ease;
+      }
+      #hatBadge.on { opacity: 1; }
+
       #stage {
         position: absolute; inset: 0; display: flex; align-items: center;
         justify-content: center; padding: 8px;
@@ -153,6 +161,7 @@
       <div id="celebrate"></div>
       <div id="toast"></div>
       <img id="burst" src="../../assets/buddy/celebrate.png" alt="" />
+      <div id="hatBadge"></div>
       <div id="float">
         <div id="char" hidden>
           <img class="klick" id="k0" alt="Kiki" />
@@ -337,21 +346,16 @@
     </script>
   
   <script>
-  // live tap pill + milestone celebration
+  // milestone celebration: the counter lives in its own panel now
   (function () {
-    const pill = document.getElementById('tapPill');
-    const count = document.getElementById('tapCount');
     const celebrate = document.getElementById('celebrate');
     const toast = document.getElementById('toast');
-    const api = window.klick || {};
-
-    const setCount = (value) => {
-      if (typeof value === 'number') count.textContent = value.toLocaleString('en-US');
-    };
-
     const burst = document.getElementById('burst');
     const stage = document.getElementById('stage');
+    const api = window.klick || {};
+
     const party = (milestone) => {
+      if (api.debug) api.debug(`celebrate ${milestone} burst=${burst ? burst.naturalWidth : 'none'}`);
       if (stage) {
         stage.classList.add('celebrating');
         setTimeout(() => stage.classList.remove('celebrating'), 1150);
@@ -362,7 +366,6 @@
         burst.classList.add('show');
         setTimeout(() => burst.classList.remove('show'), 1150);
       }
-      // confetti burst
       const colors = ['#ffb84d', '#8be0a4', '#7fd1ff', '#ff9ad5', '#ffe066'];
       for (let i = 0; i < 26; i++) {
         const piece = document.createElement('i');
@@ -374,41 +377,42 @@
         piece.style.setProperty('--rot', `${Math.random() * 540 - 270}deg`);
         piece.style.background = colors[i % colors.length];
         piece.style.left = `${45 + Math.random() * 10}%`;
-        celebrate.appendChild(piece);
+        if (celebrate) celebrate.appendChild(piece);
         setTimeout(() => piece.remove(), 1000);
       }
-      toast.textContent = `🎉 ${milestone.toLocaleString('en-US')} taps!`;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2200);
+      if (toast) {
+        toast.textContent = `\u{1F389} ${milestone.toLocaleString('en-US')} taps!`;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2200);
+      }
     };
 
     if (api.onPress) {
       api.onPress((payload) => {
-        if (!payload) return;
-        setCount(payload.taps);
-        if (api.debug) api.debug(`buddy-pill taps=${count.textContent}`);
-        if (payload.milestone) party(payload.milestone);
+        if (payload && payload.milestone) party(payload.milestone);
       });
     }
-    if (api.onStats) api.onStats((stats) => {
-      setCount(stats && stats.taps);
-      if (api.debug && window.__lastPill !== count.textContent) {
-        window.__lastPill = count.textContent;
-        api.debug(`buddy-stats taps=${count.textContent}`);
-      }
-    });
-    if (api.onSettings) {
-      api.onSettings((settings) => {
-        pill.hidden = settings && settings.showTapCounter === false;
-      });
-    }
+    if (api.onStats) api.onStats(() => {});   // keep the channel warm
+
+    // equipped hat badge
+    const HAT_EMOJI = { party: '\u{1F389}', sunglasses: '\u{1F60E}', headphones: '\u{1F3A7}',
+                        beanie: '\u{1F9F6}', chef: '\u{1F468}\u200D\u{1F373}', crown: '\u{1F451}' };
+    const badge = document.getElementById('hatBadge');
+    const paintHat = (name) => {
+      if (name && typeof name === 'object') name = name.equipped || name.equippedHat;
+      const emoji = HAT_EMOJI[name];
+      if (!badge) return;
+      badge.textContent = emoji || '';
+      badge.classList.toggle('on', !!emoji);
+      if (api.debug) api.debug(`hat badge ${name || 'none'} emoji=${emoji || '-'}`);
+    };
+    if (api.onSettings) api.onSettings((st) => paintHat(st && (st.equipped || st.equippedHat)));
     if (api.getSettings) {
-      api.getSettings().then((settings) => {
-        if (!settings) return;
-        pill.hidden = settings.showTapCounter === false;
-        if (typeof settings.taps === 'number') setCount(settings.taps);
-      }).catch(() => {});
+      api.getSettings().then((st) => { if (st) paintHat(st.equipped || st.equippedHat); }).catch(() => {});
     }
+    window.addEventListener('load', () => {
+      if (burst && api.debug) api.debug(`burst art ${burst.naturalWidth}x${burst.naturalHeight}`);
+    });
   })();
   </script>
   <script>

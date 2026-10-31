@@ -198,8 +198,21 @@
             <div class="stat"><span id="stLevel">1</span><label>level</label></div>
             <div class="stat"><span id="stHat">—</span><label>hat</label></div>
           </div>
-          <p class="hint">1 XP per key, 10 per slap. No account, no analytics: this stays in a JSON
-            file on your machine.</p>
+
+          <div class="card xp-card">
+            <div class="xp-head">
+              <span class="level-badge" id="levelBadge">LEVEL 1</span>
+              <span class="xp-count" id="xpCount">0 / 120 XP</span>
+            </div>
+            <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+            <p class="xp-next" id="xpNext">120 XP to Level 2 — Party hat</p>
+          </div>
+
+          <h2 class="section-title">Wardrobe</h2>
+          <div class="wardrobe" id="wardrobe"></div>
+
+          <p class="hint">1 XP per key, 10 per slap. Click an unlocked hat to wear it. No account,
+            no analytics: this stays in a JSON file on your machine.</p>
           <div class="row buttons">
             <button class="action danger" id="resetTaps">Reset taps to 0</button>
             <button class="ghost" id="resetCancel" hidden>Cancel</button>

@@ -46,6 +46,7 @@ static const char *kBundleID = "app.klick.Klick";
 @property (nonatomic, assign) int agentSocket;
 
 - (void)buddyPulse;
+- (void)flushStats;
 - (void)buddyMood:(NSString *)mood;
 - (NSDictionary *)statsPayload;
 - (void)pushStats:(NSDictionary *)payload;
@@ -88,6 +89,7 @@ static void *agent_listener_thread(void *context) {
 typedef struct { atomic_uint taps; atomic_uint xp; } Counters;
 static Counters app_counters;
 static _Atomic uint32_t app_last_pulse_taps;
+static _Atomic bool g_flush_scheduled;
 
 // Mirrors of the few settings the tap thread needs: no ObjC on the hot path.
 static atomic_bool g_enabled;
@@ -111,7 +113,12 @@ static void on_key(uint16_t code, bool down, uint64_t host_time) {
         atomic_fetch_add(&app_counters.taps, 1);
         atomic_fetch_add(&app_counters.xp, 1);
         AppDelegate *app = gApp;
-        if (app) dispatch_async(dispatch_get_main_queue(), ^{ [app buddyPulse]; });
+        if (app && !atomic_exchange(&g_flush_scheduled, true)) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                atomic_store(&g_flush_scheduled, false);
+                [app flushStats];
+            });
+        }
     } else if (atomic_load(&g_release) && m.role != KLICK_ROLE_MODIFIER) {
         audio_trigger(KLICK_ROLE_RELEASE, m.pan, gain * 0.7f, rate, host_time);
     }
@@ -201,8 +208,7 @@ static void mirror_settings(NSDictionary *settings) {
                            dispatch_get_main_queue(), ^{
                 atomic_fetch_add(&app_counters.taps, 1);
                 atomic_fetch_add(&app_counters.xp, 1);
-                [self buddyPulse];
-                [self pushStats:[self statsPayload]];
+                [self flushStats];
             });
         }
     }
@@ -754,6 +760,31 @@ static void mirror_settings(NSDictionary *settings) {
     }
 }
 
+- (void)flushStats {
+    uint32_t now = atomic_load(&app_counters.taps);
+    uint32_t before = atomic_exchange(&app_last_pulse_taps, now);
+    uint32_t every = (uint32_t)num(self.settings[@"celebrateEvery"], 100);
+    uint32_t milestone = klick_milestone_crossed(before, now, every);
+
+    [self pushStats:[self statsPayload]];
+
+    if (self.buddyWeb) {
+        NSMutableDictionary *payload = [[self statsPayload] mutableCopy];
+        payload[@"milestone"] = @(milestone);
+        NSData *json = [NSJSONSerialization dataWithJSONObject:payload
+                                                       options:NSJSONWritingFragmentsAllowed error:nil];
+        NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+        NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('press', %@)", text];
+        [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+    }
+
+    if (milestone > 0) {
+        [self log:@"milestone %u taps", milestone];
+        audio_trigger_cue_rate(0, fmaxf(0.3f, (float)num(self.settings[@"volume"], 0.7)), 1.18f);
+        [self buddyMood:@"party"];
+    }
+}
+
 - (void)buddyPulse {
     if (!self.buddyWeb) return;
 
@@ -941,6 +972,7 @@ static void mirror_settings(NSDictionary *settings) {
     if ([method isEqualToString:@"resetTaps"]) {
         atomic_store(&app_counters.taps, 0);
         atomic_store(&app_last_pulse_taps, 0);
+        atomic_store(&g_flush_scheduled, false);
         [self saveSettings];
         NSDictionary *stats = [self statsPayload];
         [self pushStats:stats];
@@ -966,6 +998,7 @@ static void mirror_settings(NSDictionary *settings) {
             }
             [self saveSettings];
             [self rebuildMenu];
+            [self pushSettingsToWeb];
         }
         return self.settings;
     }

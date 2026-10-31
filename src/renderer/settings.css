@@ -239,3 +239,46 @@ button.wide { display: block; width: 100%; padding: 11px 14px; text-align: cente
 button.action.danger { background: #3a2329; color: #ff9d9d; border: 1px solid rgba(255,120,120,.3); }
 button.action.danger.confirming { background: #4a2026; color: #ffb3b3; }
 button.action.danger.final { background: #7c1f27; color: #fff; }
+
+/* Today: XP progress + wardrobe */
+.xp-card { margin: 16px 0 6px; }
+.xp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.level-badge {
+  padding: 4px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .8px; background: rgba(141, 234, 193, .14); color: var(--accent);
+  border: 1px solid rgba(141, 234, 193, .35);
+}
+.xp-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.xp-bar {
+  height: 10px; border-radius: 999px; background: #10131a;
+  border: 1px solid var(--line); overflow: hidden;
+}
+.xp-fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #6fd7ab, #8DEAC1);
+  box-shadow: 0 0 12px rgba(141, 234, 193, .55);
+  transition: width 400ms cubic-bezier(.2, .8, .2, 1);
+}
+.xp-next { margin: 9px 0 0; font-size: 12px; color: var(--muted); }
+
+.wardrobe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.hat {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px 12px; border-radius: 12px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--line);
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.hat:hover { transform: translateY(-1px); border-color: rgba(141, 234, 193, .45); }
+.hat .glyph { font-size: 30px; line-height: 1; filter: saturate(1.1); }
+.hat .name { font-size: 12px; font-weight: 600; }
+.hat .need { font-size: 10.5px; color: var(--muted); }
+.hat.locked { opacity: .45; cursor: default; }
+.hat.locked:hover { transform: none; border-color: var(--line); }
+.hat.unlocked { border-color: rgba(141, 234, 193, .35); }
+.hat.equipped {
+  border-color: var(--accent); background: rgba(141, 234, 193, .12);
+  box-shadow: 0 0 0 1px rgba(141, 234, 193, .25) inset;
+}
+
+/* hat card keeps a single line with its emoji */
+#stHat.with-hat { font-size: 22px; line-height: 1.2; }
