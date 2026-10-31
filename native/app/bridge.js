@@ -90,6 +90,8 @@
     slap: () => call('slap'),
     buddyMove: (dx, dy) => call('buddyMove', { dx, dy }),
     buddyEnd: () => call('buddyEnd'),
+    counterMove: (dx, dy) => call('counterMove', { dx, dy }),
+    counterEnd: () => call('counterEnd'),
     onPlay: on('play'),
     onPress: on('press'),
     onMood: on('mood')

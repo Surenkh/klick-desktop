@@ -41,6 +41,8 @@ static const char *kBundleID = "app.klick.Klick";
 @property (nonatomic, assign) BOOL recordingTap;
 @property (nonatomic, strong) NSPanel *buddyPanel;
 @property (nonatomic, strong) WKWebView *buddyWeb;
+@property (nonatomic, strong) NSPanel *counterPanel;
+@property (nonatomic, strong) WKWebView *counterWeb;
 @property (nonatomic, assign) int agentSocket;
 
 - (void)buddyPulse;
@@ -113,6 +115,13 @@ static void on_key(uint16_t code, bool down, uint64_t host_time) {
     } else if (atomic_load(&g_release) && m.role != KLICK_ROLE_MODIFIER) {
         audio_trigger(KLICK_ROLE_RELEASE, m.pan, gain * 0.7f, rate, host_time);
     }
+}
+
+static NSPoint clamp_to_screen(NSPoint point, CGFloat width, CGFloat height) {
+    NSRect visible = [NSScreen mainScreen].visibleFrame;
+    point.x = fmax(NSMinX(visible) + 4, fmin(point.x, NSMaxX(visible) - width - 4));
+    point.y = fmax(NSMinY(visible) + 4, fmin(point.y, NSMaxY(visible) - height - 4));
+    return point;
 }
 
 static double num(id value, double fallback) {
@@ -598,13 +607,16 @@ static void mirror_settings(NSDictionary *settings) {
     if (self.buddyPanel) { [self.buddyPanel orderFrontRegardless]; return; }
 
     NSRect visible = [NSScreen mainScreen].visibleFrame;
-    CGFloat width = 264, height = 168;
+    CGFloat width = 152, height = 152;
     CGFloat x = num(self.settings[@"buddyX"], 0);
     CGFloat y = num(self.settings[@"buddyY"], 0);
     if (x <= 0 && y <= 0) {
         x = NSMaxX(visible) - width - 36;
         y = NSMinY(visible) + 56;
     }
+
+    NSPoint clamped = clamp_to_screen(NSMakePoint(x, y), width, height);
+    x = clamped.x; y = clamped.y;
 
     NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(x, y, width, height)
         styleMask:(NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel)
@@ -638,13 +650,78 @@ static void mirror_settings(NSDictionary *settings) {
 
     self.buddyPanel = panel;
     self.buddyWeb = web;
+    if ([self.settings[@"showTapCounter"] boolValue] != false) [self showCounter];
     [self log:@"buddy panel shown at %.0f,%.0f", x, y];
+}
+
+- (void)showCounter {
+    if (!self.counterPanel) {
+        NSRect visible = [NSScreen mainScreen].visibleFrame;
+        CGFloat width = 104, height = 62;
+        CGFloat buddyX = self.buddyPanel ? NSMinX(self.buddyPanel.frame) : num(self.settings[@"buddyX"], 0);
+        CGFloat buddyY = self.buddyPanel ? NSMinY(self.buddyPanel.frame) : num(self.settings[@"buddyY"], 0);
+        if (buddyX <= 0 && buddyY <= 0) {
+            buddyX = NSMaxX(visible) - 152 - 36;
+            buddyY = NSMinY(visible) + 56;
+        }
+        CGFloat x = num(self.settings[@"counterX"], 0);
+        CGFloat y = num(self.settings[@"counterY"], 0);
+        if (x <= 0 && y <= 0) {   // start right beside Kiki
+            x = buddyX + 152 + 8;
+            y = buddyY + (152 - height) / 2.0;
+        }
+
+        NSPoint clamped = clamp_to_screen(NSMakePoint(x, y), width, height);
+    x = clamped.x; y = clamped.y;
+
+    NSPanel *panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(x, y, width, height)
+            styleMask:(NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel)
+            backing:NSBackingStoreBuffered defer:NO];
+        panel.opaque = NO;
+        panel.backgroundColor = [NSColor clearColor];
+        panel.hasShadow = NO;
+        panel.level = NSFloatingWindowLevel;
+        panel.hidesOnDeactivate = NO;
+        panel.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary;
+
+        WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+        config.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+        NSString *bridge = [NSString stringWithContentsOfFile:[[NSBundle mainBundle].resourcePath
+            stringByAppendingPathComponent:@"web/bridge.js"] encoding:NSUTF8StringEncoding error:nil];
+        [config.userContentController addUserScript:[[WKUserScript alloc] initWithSource:bridge
+            injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES]];
+        [config.userContentController addScriptMessageHandler:self name:@"klick"];
+
+        WKWebView *web = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, width, height) configuration:config];
+        web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+        web.navigationDelegate = self;
+        @try { [web setValue:@NO forKey:@"drawsBackground"]; } @catch (NSException *e) {}
+        panel.contentView = web;
+
+        NSString *root = [[NSBundle mainBundle].resourcePath stringByAppendingPathComponent:@"web"];
+        NSURL *url = [NSURL fileURLWithPath:[root stringByAppendingPathComponent:@"counter.html"]];
+        [web loadFileURL:url allowingReadAccessToURL:[NSURL fileURLWithPath:root]];
+        [panel orderFrontRegardless];
+
+        self.counterPanel = panel;
+        self.counterWeb = web;
+        [self log:@"tap counter shown at %.0f,%.0f", x, y];
+    } else {
+        [self.counterPanel orderFrontRegardless];
+    }
+}
+
+- (void)hideCounter {
+    [self.counterPanel orderOut:nil];
+    self.counterPanel = nil;
+    self.counterWeb = nil;
 }
 
 - (void)hideBuddy {
     [self.buddyPanel orderOut:nil];
     self.buddyPanel = nil;
     self.buddyWeb = nil;
+    [self hideCounter];
     [self log:@"buddy panel hidden"];
 }
 
@@ -670,6 +747,10 @@ static void mirror_settings(NSDictionary *settings) {
     if (self.buddyWeb) {
         NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
         [self.buddyWeb evaluateJavaScript:js completionHandler:nil];
+    }
+    if (self.counterWeb) {
+        NSString *js = [NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text];
+        [self.counterWeb evaluateJavaScript:js completionHandler:nil];
     }
 }
 
@@ -714,6 +795,15 @@ static void mirror_settings(NSDictionary *settings) {
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    if (webView == self.counterWeb) {
+        [self log:@"counter page loaded"];
+        NSData *stats = [NSJSONSerialization dataWithJSONObject:[self statsPayload]
+                                                        options:NSJSONWritingFragmentsAllowed error:nil];
+        NSString *text = [[NSString alloc] initWithData:stats encoding:NSUTF8StringEncoding];
+        [webView evaluateJavaScript:[NSString stringWithFormat:@"window.__klickEvent && window.__klickEvent('stats', %@)", text]
+                  completionHandler:nil];
+        return;
+    }
     if (webView == self.buddyWeb) {
         [self log:@"buddy page loaded"];
         NSData *settings = [NSJSONSerialization dataWithJSONObject:self.settings
@@ -867,6 +957,9 @@ static void mirror_settings(NSDictionary *settings) {
         NSDictionary *patch = args[@"patch"];
         if ([patch isKindOfClass:[NSDictionary class]]) {
             [self.settings addEntriesFromDictionary:patch];
+            if (patch[@"showTapCounter"]) {
+                if ([patch[@"showTapCounter"] boolValue]) { [self showCounter]; } else { [self hideCounter]; }
+            }
             if (patch[@"pack"]) {
                 NSUInteger index = [self.packNames indexOfObject:patch[@"pack"]];
                 if (index != NSNotFound) { self.activePack = (int)index; audio_select_pack(self.activePack); }
@@ -898,6 +991,23 @@ static void mirror_settings(NSDictionary *settings) {
         frame.origin.x += dx;
         frame.origin.y -= dy;
         [self.buddyPanel setFrameOrigin:frame.origin];
+        return @YES;
+    }
+    if ([method isEqualToString:@"counterMove"]) {
+        CGFloat dx = [args[@"dx"] doubleValue];
+        CGFloat dy = [args[@"dy"] doubleValue];
+        NSRect frame = self.counterPanel.frame;
+        frame.origin.x += dx;
+        frame.origin.y -= dy;
+        [self.counterPanel setFrameOrigin:frame.origin];
+        return @YES;
+    }
+    if ([method isEqualToString:@"counterEnd"]) {
+        NSPoint origin = self.counterPanel.frame.origin;
+        self.settings[@"counterX"] = @(origin.x);
+        self.settings[@"counterY"] = @(origin.y);
+        [self saveSettings];
+        [self log:@"counter moved to %.0f,%.0f", origin.x, origin.y];
         return @YES;
     }
     if ([method isEqualToString:@"buddyEnd"]) {

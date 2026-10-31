@@ -40,7 +40,7 @@ build_arch() {
 
   cp native/app/Info.plist "$APP/Contents/Info.plist"
   cp src/renderer/settings.html src/renderer/settings.css src/renderer/settings.js \
-     src/renderer/buddy.html "$APP/Contents/Resources/web/"
+     src/renderer/buddy.html src/renderer/counter.html "$APP/Contents/Resources/web/"
   cp native/app/bridge.js "$APP/Contents/Resources/web/"
   sed -i '' 's|\.\./\.\./assets/|../assets/|g' \
     "$APP/Contents/Resources/web/settings.html" "$APP/Contents/Resources/web/buddy.html"

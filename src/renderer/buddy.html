@@ -61,7 +61,7 @@
 
       #stage {
         position: absolute; inset: 0; display: flex; align-items: center;
-        justify-content: center; padding: 6px 58px 6px 10px;
+        justify-content: center; padding: 8px;
         -webkit-app-region: drag; overflow: hidden;
       }
 
@@ -140,14 +140,6 @@
       }
 
       /* settings affordance */
-      #gear {
-        position: absolute; right: 4px; bottom: 4px; width: 24px; height: 24px;
-        border-radius: 50%; background: rgba(255,255,255,.10); color: #d7d2ea;
-        display: grid; place-items: center; font-size: 12px;
-        -webkit-app-region: no-drag; opacity: 0; transition: opacity 140ms ease;
-      }
-      #stage:hover #gear { opacity: 1; }
-      #gear:hover { background: rgba(255,255,255,.2); }
 
       @media (prefers-reduced-motion: reduce) {
         #float { animation: none; }
@@ -174,8 +166,6 @@
           <div class="mouth"></div>
         </div>
       </div>
-      <div id="gear" title="Klick settings">⚙</div>
-      <div id="tapPill"><span class="value" id="tapCount">0</span><span class="label">taps</span></div>
     </div>
     <script>
       const api = window.klick || {
@@ -340,10 +330,6 @@
       }
 
       // ---------- shell ----------
-      document.getElementById('gear').addEventListener('click', (e) => {
-        e.stopPropagation();
-        api.openSettings();
-      });
       window.addEventListener('beforeunload', () => {
         clearTimeout(timer); clearTimeout(blinkTimer);
         clearTimeout(sleepTimer); clearTimeout(pressTimer);
