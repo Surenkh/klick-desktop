@@ -15,15 +15,50 @@ mkdir -p "$STAGE" "$DIST"
 : > "$DIST/.metadata_never_index"
 : > "$STAGE/.metadata_never_index"
 
+# Signing / notarization
+#   DEVELOPER_ID_APPLICATION  e.g. "Developer ID Application: Your Name (ABCDE12345)"
+#   APPLE_ID                  Apple ID used for notarytool
+#   APPLE_TEAM_ID             your 10-character team id
+#   APPLE_APP_PASSWORD        app-specific password for notarytool
+# With a Developer ID the app is signed with the hardened runtime and the DMG is
+# submitted to Apple and stapled, so users get no Gatekeeper prompt at all.
 sign_app() {
   APP="$1"
-  IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep "Klick Local Signing" | awk '{print $2}' | head -1)"
-  if [ -n "$IDENTITY" ]; then
-    codesign --force --deep --sign "$IDENTITY" --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+  if [ -n "${DEVELOPER_ID_APPLICATION:-}" ]; then
+    echo "   signing with Developer ID (hardened runtime)"
+    codesign --force --deep --options runtime --timestamp \
+      --sign "$DEVELOPER_ID_APPLICATION" \
+      --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
   else
-    codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+    IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep "Klick Local Signing" | awk '{print $2}' | head -1)"
+    if [ -n "$IDENTITY" ]; then
+      echo "   signing with local identity"
+      codesign --force --deep --sign "$IDENTITY" --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+    else
+      echo "   ad-hoc signature (no certificate available)"
+      codesign --force --deep --sign - --entitlements native/app/entitlements.plist "$APP" 2>&1 | tail -1
+    fi
   fi
   codesign --verify --deep --strict "$APP"
+}
+
+notarize_dmg() {
+  DMG="$1"
+  if [ -z "${DEVELOPER_ID_APPLICATION:-}" ]; then
+    return 0
+  fi
+  if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ] || [ -z "${APPLE_APP_PASSWORD:-}" ]; then
+    echo "   notarization skipped (set APPLE_ID, APPLE_TEAM_ID and APPLE_APP_PASSWORD)"
+    return 0
+  fi
+  echo "   notarizing $(basename "$DMG") (this can take a few minutes)"
+  xcrun notarytool submit "$DMG" \
+    --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" \
+    --wait
+  xcrun stapler staple "$DMG"
+  xcrun stapler validate "$DMG"
+  spctl --assess --type open --context context:primary-signature --verbose "$DMG" || true
+  echo "   notarized and stapled"
 }
 
 build_arch() {
@@ -54,6 +89,7 @@ build_arch() {
   DMG="$DIST/Klick-$VERSION-$NAME.dmg"
   rm -f "$DMG"
   hdiutil create -quiet -volname "Klick" -srcfolder "$APP" -ov -format UDZO "$DMG"
+  notarize_dmg "$DMG"
 
   # never leave a registrable staging bundle behind
   "$LSREG" -u "$PWD/$APP" 2>/dev/null || true

@@ -2,6 +2,17 @@
 
 Download the DMG for your Mac and drag **Klick.app** onto the Applications folder:
 
+## Quick install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Surenkh/klick-desktop/main/scripts/install.sh | sh
+```
+
+Chooses the right architecture, verifies the SHA-256 from the release notes, installs
+to `/Applications`, clears the quarantine flag and launches Klick.
+
+## Direct download
+
 | Mac | File |
 | --- | --- |
 | Apple silicon (M1–M6) | `Klick-0.5.0-arm64.dmg` |

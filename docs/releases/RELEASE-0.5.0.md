@@ -2,7 +2,16 @@
 
 Native macOS, 8 MB, no Electron. Latency stays at ~2–4 ms.
 
-### Install
+### Install in one line
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Surenkh/klick-desktop/main/scripts/install.sh | sh
+```
+
+Picks your architecture, verifies the SHA-256, installs to `/Applications`, clears the
+quarantine flag and launches Klick — no Gatekeeper dialog.
+
+### Or download the DMG
 
 | Mac | File |
 | --- | --- |
@@ -10,7 +19,9 @@ Native macOS, 8 MB, no Electron. Latency stays at ~2–4 ms.
 | Intel | `Klick-0.5.0-x64.dmg` |
 
 Drag **Klick** to Applications, launch, allow it once via **System Settings → Privacy &
-Security → Open Anyway**, then flip **Input Monitoring** on.
+Security → Open Anyway**, then flip **Input Monitoring** on. (Klick is not notarized
+yet, so browser downloads always need that one-time confirmation; the installer above
+skips it.)
 
 ### What's new
 

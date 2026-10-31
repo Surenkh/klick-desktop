@@ -7,19 +7,48 @@ A native macOS app: **7 MB**, and **~2–4 ms** from key to ear.
 
 ![Klick](docs/cover.jpg)
 
-## Download
+## Quick install (no Gatekeeper prompts)
 
-Grab the DMG for your Mac from [Releases](https://github.com/Surenkh/klick-desktop/releases/latest):
+```sh
+curl -fsSL https://raw.githubusercontent.com/Surenkh/klick-desktop/main/scripts/install.sh | sh
+```
+
+The script picks the right build for your Mac, **verifies the SHA-256** against the
+published checksum, installs `Klick.app` to `/Applications`, clears the quarantine
+flag and launches it. Prefer to read before running? [It is 80 lines](scripts/install.sh).
+
+Homebrew users can use the cask definition in [`Casks/klick.rb`](Casks/klick.rb), which
+clears the quarantine flag in a `postflight` step.
+
+## Or download the DMG
 
 | Mac | File |
 | --- | --- |
 | Apple silicon (M1–M6) | `Klick-0.5.0-arm64.dmg` |
 | Intel | `Klick-0.5.0-x64.dmg` |
 
-Open the DMG, drag **Klick** to Applications, then launch it. macOS will refuse an
-unsigned app once: **System Settings → Privacy & Security → Open Anyway**. Klick then
-asks for **Input Monitoring** — one switch, and it can never see what you type or
-block a keystroke.
+Open the DMG and drag **Klick** to Applications.
+
+### Why macOS may warn you
+
+Klick is an independent open-source app without a $99/year Apple Developer
+certificate, so a DMG downloaded in a browser carries macOS's quarantine flag and
+Gatekeeper shows *"Apple could not verify Klick"* the first time. Nothing is wrong
+with the app — that dialog appears for every unsigned app, including many you
+already use. Two ways around it:
+
+1. **Use the one-line installer above** — it clears the flag for you.
+2. **Open Anyway** — launch Klick once, then go to **System Settings → Privacy &
+   Security**, scroll down and click **Open Anyway**, and confirm.
+
+Either way you only do this once per install. When a Developer ID certificate is
+available the release pipeline signs with the hardened runtime, notarizes and
+staples the DMG (see `scripts/package-native.sh`), and these prompts disappear
+entirely.
+
+Grant **Input Monitoring** afterwards so Klick can hear key presses: **System
+Settings → Privacy & Security → Input Monitoring**. It never sees what you type and
+can never block a keystroke.
 
 ## What it does
 
