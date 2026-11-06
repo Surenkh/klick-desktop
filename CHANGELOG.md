@@ -4,6 +4,18 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.6.1 — 2026-11-06
+
+- **The four original packs are back** — `laptop`, `hard`, `fast`, `soft`, restored by
+  request and listed first in the Sound tab. They are Mixkit-licensed, not MIT; the
+  other sixteen remain MIT/CC0.
+- **Shorter sample tails**: keys cap at 140 ms, delete 200 ms, enter 240 ms, space
+  260 ms, each with a 3 ms fade, so the sound ends with the click instead of ringing
+  on.
+- **Sidebar**: the Klick mark sits directly under the window border with the section
+  list immediately beneath it.
+- 20 packs, 2.1 MB of audio.
+
 ## 0.6.0 — 2026-10-31
 
 - **16 packs of real recordings, all MIT or CC0.** Twelve switches (Alpaca, Ink

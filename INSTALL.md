@@ -15,8 +15,8 @@ to `/Applications`, clears the quarantine flag and launches Klick.
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M6) | `Klick-0.6.0-arm64.dmg` |
-| Intel | `Klick-0.6.0-x64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.6.1-arm64.dmg` |
+| Intel | `Klick-0.6.1-x64.dmg` |
 
 Not sure which? Apple menu →  About This Mac → the *Chip* line says Apple M… or Intel.
 
@@ -48,10 +48,10 @@ and no network code in the app at all.
 ## Verify the download (optional)
 
 ```
-shasum -a 256 Klick-0.6.0-arm64.dmg
-# 1ad0a62f12642fe292d3be5e6fdf61f6431458dc4b50e7623ed049675626ea87
-shasum -a 256 Klick-0.6.0-x64.dmg
-# a6e0981dbb9fdd5768a9f7c2ee2b789a59d2f8e7ec5fe9159cca26bbeac45f87
+shasum -a 256 Klick-0.6.1-arm64.dmg
+# d54c434401929c364194c696e6d79bc093ebf4a5f23114b49cc890de8916091a
+shasum -a 256 Klick-0.6.1-x64.dmg
+# 97b66bee8fae75a14daa8efd7e29e6a91fc755ee6fab7365d89ff16d1a066369
 ```
 
 ## Uninstall

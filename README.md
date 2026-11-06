@@ -24,8 +24,8 @@ clears the quarantine flag in a `postflight` step.
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M6) | `Klick-0.6.0-arm64.dmg` |
-| Intel | `Klick-0.6.0-x64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.6.1-arm64.dmg` |
+| Intel | `Klick-0.6.1-x64.dmg` |
 
 Open the DMG and drag **Klick** to Applications.
 
@@ -52,9 +52,10 @@ can never block a keystroke.
 
 ## What it does
 
-- A real keyboard sound under every key, in every app, from **16 packs of real
-  recordings** — Cherry, Gateron, Topre, Alps, Model M and more — every one MIT or
-  CC0 licensed.
+- A real keyboard sound under every key, in every app, from **20 packs of real
+  recordings** — Cherry, Gateron, Topre, Alps, Model M, plus the four original Klick
+  sounds. Sixteen packs are MIT/CC0; the four originals are bundled under the Mixkit
+  Free License (see [ASSET-LICENSES.md](ASSET-LICENSES.md)).
 - **Kiki** floats above your windows, bounces on every key, can be dragged
   anywhere, and slaps back (+10 XP) when you click him.
 - **XP, levels and hats** — every key earns XP, Kiki levels up, and six hats unlock
@@ -74,7 +75,7 @@ Recording, no microphone, no network, no account, no telemetry.
 
 ## Why it is small and fast
 
-| Metric | Klick 0.6.0 (native) |
+| Metric | Klick 0.6.1 (native) |
 | --- | --- |
 | App size | **7 MB** |
 | DMG | **7 MB** |
