@@ -4,6 +4,14 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.6.2 — 2026-11-06
+
+- **Sound length setting** (Keys tab): *Natural* plays each sample as recorded;
+  *Tight* caps keys at 60 ms, delete 150, enter 180 and space 200, with an 8 ms fade
+  in the mixer. Off by default, applied instantly and at launch.
+- Engine: `audio_set_tail_mode()`; the test suite verifies a tight key decays under
+  75 ms and that natural restores the full sample.
+
 ## 0.6.1 — 2026-11-06
 
 - **The four original packs are back** — `laptop`, `hard`, `fast`, `soft`, restored by

@@ -24,8 +24,8 @@ clears the quarantine flag in a `postflight` step.
 
 | Mac | File |
 | --- | --- |
-| Apple silicon (M1–M6) | `Klick-0.6.1-arm64.dmg` |
-| Intel | `Klick-0.6.1-x64.dmg` |
+| Apple silicon (M1–M6) | `Klick-0.6.2-arm64.dmg` |
+| Intel | `Klick-0.6.2-x64.dmg` |
 
 Open the DMG and drag **Klick** to Applications.
 
@@ -75,7 +75,7 @@ Recording, no microphone, no network, no account, no telemetry.
 
 ## Why it is small and fast
 
-| Metric | Klick 0.6.1 (native) |
+| Metric | Klick 0.6.2 (native) |
 | --- | --- |
 | App size | **7 MB** |
 | DMG | **7 MB** |
