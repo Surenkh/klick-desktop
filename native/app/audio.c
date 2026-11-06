@@ -54,6 +54,8 @@ typedef struct {
 typedef struct {
     const float *data;
     uint32_t frames;
+    uint32_t cap_frames;      // 0 = play the sample as stored
+    uint32_t fade_frames;
     double pos;
     double inc;
     float gl;
@@ -83,6 +85,7 @@ static volatile bool g_running = false;
 static volatile unsigned long g_render_count = 0;
 static volatile unsigned long g_voice_count = 0;
 static mach_timebase_info_data_t g_timebase;
+static volatile int g_tight_tails = 0;   // 0 natural, 1 tight
 
 static pthread_mutex_t g_reload_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -215,6 +218,19 @@ static UInt32 set_device_buffer(UInt32 frames) {
 
 // ------------------------------------------------------------ render callback
 
+static double role_cap_ms(int role) {
+    switch (role) {
+        case KLICK_ROLE_KEYS:     return 60.0;
+        case KLICK_ROLE_SPACE:    return 200.0;
+        case KLICK_ROLE_ENTER:    return 180.0;
+        case KLICK_ROLE_DELETE:   return 150.0;
+        case KLICK_ROLE_MODIFIER: return 90.0;
+        case KLICK_ROLE_RELEASE:  return 90.0;
+        case KLICK_ROLE_CLICK:    return 60.0;
+        default:                  return 0.0;
+    }
+}
+
 static void start_voice(const Trigger *t, uint64_t now) {
     Take *sample = NULL;
     if (t->role >= 200) {
@@ -240,6 +256,16 @@ static void start_voice(const Trigger *t, uint64_t now) {
         float angle = (pan + 1.0f) * 0.25f * (float)M_PI;
         v->gl = cosf(angle) * t->gain * 1.4142f;
         v->gr = sinf(angle) * t->gain * 1.4142f;
+        v->cap_frames = 0;
+        v->fade_frames = 0;
+        if (g_tight_tails) {
+            double ms = role_cap_ms(t->role >= 200 ? -1 : t->role);
+            if (ms > 0) {
+                v->cap_frames = (uint32_t)(g_device_rate * ms / 1000.0);
+                v->fade_frames = (uint32_t)(g_device_rate * 0.008);
+                if (v->cap_frames > sample->frames) { v->cap_frames = 0; v->fade_frames = 0; }
+            }
+        }
         v->active = true;
         g_voice_count++;
 
@@ -272,6 +298,13 @@ static void mix_slice(float *left, float *right, uint32_t frames) {
             if (idx + 1 >= v->frames) { v->active = false; break; }
             float frac = (float)(v->pos - idx);
             float s = v->data[idx] * (1.0f - frac) + v->data[idx + 1] * frac;
+            if (v->cap_frames) {
+                uint32_t at = (uint32_t)v->pos;
+                if (at >= v->cap_frames) { v->active = false; break; }
+                if (v->fade_frames && at + v->fade_frames > v->cap_frames) {
+                    s *= (float)(v->cap_frames - at) / (float)v->fade_frames;
+                }
+            }
             left[f] += s * v->gl;
             if (right) right[f] += s * v->gr;
             v->pos += v->inc;
@@ -478,6 +511,9 @@ bool audio_take_reconfigure_flag(void) {
 }
 
 bool audio_is_running(void) { return g_running; }
+
+void audio_set_tail_mode(int tight) { g_tight_tails = tight ? 1 : 0; }
+int audio_tail_mode(void) { return g_tight_tails; }
 
 bool audio_load_cues(const char *dir) {
     char path[1024];

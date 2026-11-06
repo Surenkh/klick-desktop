@@ -31,6 +31,8 @@ double audio_latency_ms(void);      // last tap -> render start
 void audio_reload_for_device(void); // after output device change / wake
 bool audio_take_reconfigure_flag(void);
 bool audio_is_running(void);
+void audio_set_tail_mode(int tight);
+int audio_tail_mode(void);
 bool audio_load_cues(const char *dir);
 void audio_trigger_cue(int which, float gain);
 void audio_trigger_cue_rate(int which, float gain, float rate);

@@ -119,6 +119,27 @@ int main(void) {
         audio_select_pack(0);
     }
 
+    printf("tail mode\n");
+    {
+        float block[1024 * 2];
+        audio_select_pack(0);
+        // drain anything still ringing from the audition loop
+        for (int i = 0; i < 200; i++) { memset(block, 0, sizeof(block)); audio_test_mix(block, 1024); }
+        audio_set_tail_mode(1);
+        CHECK(audio_tail_mode() == 1, "tight tails can be enabled");
+        audio_trigger(KLICK_ROLE_KEYS, 0.0f, 1.0f, 1.0f, mach_absolute_time());
+        int last_audible = 0;
+        for (int i = 0; i < 40; i++) {            // 40 x 1024 frames at 48 kHz = 853 ms
+            memset(block, 0, sizeof(block));
+            audio_test_mix(block, 1024);
+            if (!buffer_is_silent(block, 1024)) last_audible = i;
+        }
+        double ms = (last_audible + 1) * 1024.0 / 48.0;
+        CHECK(ms <= 75.0, "tight mode stops a key under ~75 ms (%.1f ms)", ms);
+        audio_set_tail_mode(0);
+        CHECK(audio_tail_mode() == 0, "natural mode restores the full sample");
+    }
+
     // ---- cues
     printf("cues\n");
     CHECK(audio_load_cues("assets/cues"), "recorded cues load");

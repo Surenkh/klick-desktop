@@ -140,6 +140,7 @@ function applyToControls() {
     $(id + 'Out').textContent = Math.round((cfg[key] ?? 0.7) * 100) + '%';
   }
   $('releaseSounds').checked = !!cfg.releaseSounds;
+  if ($('tailMode')) $('tailMode').value = cfg.tailMode === 'tight' ? 'tight' : 'natural';
   $('mouseClicks').checked = !!cfg.mouseClicks;
   $('launchAtLogin').checked = !!cfg.launchAtLogin;
   $('buddy').checked = !!cfg.buddy;
@@ -334,6 +335,9 @@ async function boot() {
   $('quickKiki').addEventListener('change', async (e) => {
     cfg = await window.klick.setSettings({ buddy: e.target.checked });
     applyToControls();
+  });
+  $('tailMode').addEventListener('change', async (e) => {
+    cfg = await window.klick.setSettings({ tailMode: e.target.value });
   });
   for (const key of ['releaseSounds', 'mouseClicks', 'launchAtLogin', 'buddy']) {
     $(key).addEventListener('change', async (e) => {

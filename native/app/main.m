@@ -161,8 +161,10 @@ static void mirror_settings(NSDictionary *settings) {
     [self loadPackManifest];
 
     BOOL audioOK = audio_init();
-    [self log:@"audio init ok=%d initStatus=%d startStatus=%d running=%d rate=%.0f",
-        audioOK, (int)audio_init_status(), (int)audio_start_status(), audio_is_running(), audio_device_rate()];
+    audio_set_tail_mode([self.settings[@"tailMode"] isEqualToString:@"tight"]);
+    [self log:@"audio init ok=%d initStatus=%d startStatus=%d running=%d rate=%.0f tail=%@",
+        audioOK, (int)audio_init_status(), (int)audio_start_status(), audio_is_running(), audio_device_rate(),
+        audio_tail_mode() ? @"tight" : @"natural"];
     [self reloadPacks];
 
     [self startCapture];
@@ -357,6 +359,7 @@ static void mirror_settings(NSDictionary *settings) {
         @"celebrationVolume": @0.7,
         @"systemVolume": @0.7,
         @"releaseSounds": @YES,
+        @"tailMode": @"natural",
         @"mouseClicks": @YES,
         @"launchAtLogin": @NO,
         @"onboarded": @NO,
@@ -1066,6 +1069,9 @@ static void mirror_settings(NSDictionary *settings) {
         NSDictionary *patch = args[@"patch"];
         if ([patch isKindOfClass:[NSDictionary class]]) {
             [self.settings addEntriesFromDictionary:patch];
+            if (patch[@"tailMode"]) {
+                audio_set_tail_mode([patch[@"tailMode"] isEqualToString:@"tight"]);
+            }
             if (patch[@"showTapCounter"]) {
                 if ([patch[@"showTapCounter"] boolValue]) { [self showCounter]; } else { [self hideCounter]; }
             }
