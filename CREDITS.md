@@ -4,8 +4,10 @@ Assets as shipped in **Klick 0.3.0**.
 
 ## Sound sources
 
-All 16 shipped packs are real recordings under MIT or CC0. Nothing is synthesised,
-and no Mixkit or Epidemic Sound material remains.
+Twenty packs ship: sixteen are real recordings under MIT or CC0, and four are the
+original Mixkit-derived packs (`laptop`, `hard`, `fast`, `soft`) restored by request.
+Nothing is synthesised and no Epidemic Sound material remains. Note that the four
+Mixkit packs are **not** MIT — see the Mixkit section below.
 
 ### MIT — [tplai/kbsim](https://github.com/tplai/kbsim)
 
@@ -44,6 +46,13 @@ Cherry KC 1000 recorded with a Shure SM7B.
 | --- | --- |
 | `cherry-kc1000` | The 32 single-keypress recordings |
 | `cherry-typing` | Human typing takes, cut into single hits |
+
+### Mixkit Free License — `laptop`, `hard`, `fast`, `soft`
+
+Cut from Mixkit recordings. The Mixkit Free License permits use in a project but not
+redistribution of the audio as standalone files, so these four are bundled content
+rather than open-source assets. They are included because the project owner asked for
+the original sounds back; removing them restores a 100% MIT/CC0 audio tree.
 
 Every pack records its licence, author and source in `assets/packs/manifest.json`.
 

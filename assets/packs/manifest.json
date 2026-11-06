@@ -1,6 +1,42 @@
 {
   "packs": [
     {
+      "id": "laptop",
+      "name": "Laptop",
+      "vibe": "Crisp, light laptop keys",
+      "category": "Laptop",
+      "license": "Mixkit Free License",
+      "author": "Mixkit",
+      "source": "mixkit.co"
+    },
+    {
+      "id": "hard",
+      "name": "Hard",
+      "vibe": "Heavy press with more body",
+      "category": "Thock",
+      "license": "Mixkit Free License",
+      "author": "Mixkit",
+      "source": "mixkit.co"
+    },
+    {
+      "id": "fast",
+      "name": "Fast",
+      "vibe": "Tight and bright, built for speed",
+      "category": "Clicky",
+      "license": "Mixkit Free License",
+      "author": "Mixkit",
+      "source": "mixkit.co"
+    },
+    {
+      "id": "soft",
+      "name": "Soft",
+      "vibe": "Muffled, quiet, office-safe",
+      "category": "Quiet",
+      "license": "Mixkit Free License",
+      "author": "Mixkit",
+      "source": "mixkit.co"
+    },
+    {
       "name": "Alpaca",
       "vibe": "Smooth linear, soft landing",
       "category": "Linear",
