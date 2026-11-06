@@ -4,6 +4,19 @@ Dates are release dates. Installers live on the
 [releases page](https://github.com/Surenkh/klick-desktop/releases); each entry has a
 detailed note under [`docs/releases/`](docs/releases/).
 
+## 0.6.3 — 2026-11-06
+
+- **Buddy cue buttons work**: Done / Needs you / Error were stubbed to `false` in the
+  bridge; they now play through the real cue bus and move Kiki's mood.
+- **Wardrobe shows what you wear**: the frame follows your choice immediately (it was
+  reading a different field than the click wrote), with a ✓ badge on the worn hat and
+  "No hat" framed when nothing is on.
+- **Kiki keeps his face**: `press.png` is an angry face and was flashed on every key
+  press; presses now only squash, so the expression stays friendly.
+- **Celebrations keep him visible**: removed the rule that hid the sprite during a
+  milestone; the party pose is the same size, with confetti and the toast.
+- **Agents tab removed** until Cursor/Codex are actually wired.
+
 ## 0.6.2 — 2026-11-06
 
 - **Sound length setting** (Keys tab): *Natural* plays each sample as recorded;

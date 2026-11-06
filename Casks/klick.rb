@@ -1,13 +1,13 @@
 cask "klick" do
-  version "0.6.2"
+  version "0.6.3"
 
   on_arm do
-    sha256 "9ac46339284af0ac2a8151e7711ce3196dea090cb8c28cef67676a5f0ed7c759"
+    sha256 "3b250db2404d3d97393caf34940645670b63418f37acd253c12f085fcad2ee07"
     url "https://github.com/Surenkh/klick-desktop/releases/download/v#{version}/Klick-#{version}-arm64.dmg"
   end
 
   on_intel do
-    sha256 "5a112fab524270e6e40fa4b035c42c49cec8f323c1cfab43089aac686fb0a323"
+    sha256 "91ca4a76ef9135c9d7887db831d111efbbb4b4f2419fe6edf758259a5b9af87d"
     url "https://github.com/Surenkh/klick-desktop/releases/download/v#{version}/Klick-#{version}-x64.dmg"
   end
 
