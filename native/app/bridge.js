@@ -80,7 +80,7 @@
     demoTap: () => call('demoTap'),
     previewSound: (kind) => call('previewSound', { kind }),
     resetTaps: () => call('resetTaps'),
-    demoCue: () => Promise.resolve(false),
+    demoCue: (kind) => call('demoCue', { kind }),
     quit: () => call('quit'),
     openSettings: () => call('openSettings'),
     openLink: (url) => call('openLink', { url }),

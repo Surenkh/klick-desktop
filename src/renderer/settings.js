@@ -163,32 +163,41 @@ async function renderAgents() {
   if (!window.klick.agents) return;
   const status = await window.klick.agents();
   if (!status || typeof status !== 'object') return;
+
   const host = $('agents');
   host.innerHTML = '';
+
   for (const [id, a] of Object.entries(status)) {
     const row = document.createElement('div');
     row.className = 'agent';
     row.innerHTML = `
       <div class="meta">
-        <b>${a.label}</b>
-        <span>${(a.events || []).join(' · ')} — ${a.config}</span>
+        <b>${a.label || id}</b>
+        <span>${(a.events || []).join(' · ')}${a.config ? ' — ' + a.config : ''}</span>
       </div>
       <span class="pill ${a.installed ? 'on' : ''}">${a.installed ? 'connected' : 'not connected'}</span>`;
+
     const btn = document.createElement('button');
+    const supported = a.supported !== false;
     btn.className = 'action' + (a.installed ? ' ghost' : '');
-    btn.textContent = a.installed ? 'Remove' : 'Connect';
+    btn.textContent = !supported ? 'Coming soon' : (a.installed ? 'Remove' : 'Connect');
+    btn.disabled = !supported;
+
     btn.addEventListener('click', async () => {
       btn.disabled = true;
+      btn.textContent = 'Working…';
       try {
-        if (a.installed) await window.klick.removeAgent(id);
-        else await window.klick.connectAgent(id);
-        $('agentNote').textContent = `${a.label} updated. Restart it to pick up the change.`;
+        const result = a.installed
+          ? await window.klick.removeAgent(id)
+          : await window.klick.connectAgent(id);
+        if (result && result.ok === false) throw new Error(result.error || 'failed');
+        $('agentNote').textContent = `${a.label || id} ${a.installed ? 'removed' : 'connected'}. Restart it to pick up the change.`;
       } catch (err) {
-        $('agentNote').textContent = `${a.label}: ${err.message || err}`;
+        $('agentNote').textContent = `${a.label || id}: ${err.message || err}`;
       }
       await renderAgents();
-  if (window.klick.debug) window.klick.debug('boot: agents done');
     });
+
     row.appendChild(btn);
     host.appendChild(row);
   }
@@ -248,11 +257,14 @@ async function renderAgents() {
     const host = $('wardrobe');
     if (!host) return;
     const level = latestStats.level || 1;
-    const wornId = (HAT_BY_ID(latestStats.equipped) || HAT_BY_ID(latestStats.hat) || HAT_BY_LEVEL(level) || {}).id;
+    const explicit = latestStats.equipped || null;
+    const auto = HAT_BY_ID(latestStats.hat) || HAT_BY_LEVEL(level);
+    const wornId = explicit === 'none' ? null : (HAT_BY_ID(explicit) || auto || {}).id;
     host.innerHTML = '';
     for (const hat of HATS) {
       const unlocked = level >= hat.level;
-      const equipped = unlocked && hat.id === wornId;
+      // frame only the hat the user actually chose; auto-worn hats stay unframed
+      const equipped = unlocked && explicit === hat.id;
       const el = document.createElement('button');
       el.className = `hat ${unlocked ? 'unlocked' : 'locked'}${equipped ? ' equipped' : ''}`;
       el.disabled = !unlocked;
@@ -264,9 +276,9 @@ async function renderAgents() {
         `<span class="need">${unlocked ? (equipped ? 'wearing · click to remove' : `Lv ${hat.level}`) : `🔒 Lv ${hat.level}`}</span>`;
       if (unlocked) {
         el.addEventListener('click', async () => {
-          const next = equipped ? 'none' : hat.id;
+          const next = explicit === hat.id ? 'none' : hat.id;   // tap twice to remove
           cfg = await window.klick.setSettings({ equippedHat: next });
-          paintStats({ equipped: next });
+          paintStats({ equippedHat: next });
         });
       }
       host.appendChild(el);
@@ -274,7 +286,7 @@ async function renderAgents() {
 
     // explicit "no hat" option so anyone can take it off
     const none = document.createElement('button');
-    const wearingNone = !wornId || wornId === 'none';
+    const wearingNone = explicit === 'none';
     none.className = `hat unlocked${wearingNone ? ' equipped' : ''}`;
     none.innerHTML =
       '<span class="art nohat">🚫</span>' +
@@ -282,7 +294,7 @@ async function renderAgents() {
       `<span class="need">${wearingNone ? 'wearing nothing' : 'click to remove'}</span>`;
     none.addEventListener('click', async () => {
       cfg = await window.klick.setSettings({ equippedHat: 'none' });
-      paintStats({ equipped: 'none' });
+      paintStats({ equippedHat: 'none' });
     });
     host.appendChild(none);
   };

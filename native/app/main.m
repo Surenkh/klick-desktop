@@ -1026,7 +1026,17 @@ static void mirror_settings(NSDictionary *settings) {
             NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             installed = json[@"hooks"] != nil;
         }
-        return @{ @"claude": @{ @"installed": @(installed), @"events": @[@"done", @"needs-you", @"error"] } };
+        return @{
+            @"claude": @{ @"label": @"Claude Code", @"config": @"~/.claude/settings.json",
+                          @"events": @[@"done", @"needs-you", @"error"],
+                          @"installed": @(installed), @"supported": @YES },
+            @"cursor": @{ @"label": @"Cursor", @"config": @"not wired yet",
+                          @"events": @[@"done", @"needs-you", @"error"],
+                          @"installed": @NO, @"supported": @NO },
+            @"codex":  @{ @"label": @"Codex CLI", @"config": @"not wired yet",
+                          @"events": @[@"done", @"needs-you", @"error"],
+                          @"installed": @NO, @"supported": @NO }
+        };
     }
     if ([method isEqualToString:@"connectAgent"] || [method isEqualToString:@"removeAgent"]) {
         NSString *agent = args[@"agent"] ?: @"";
@@ -1056,6 +1066,25 @@ static void mirror_settings(NSDictionary *settings) {
             audio_trigger_cue(0, fmaxf(0.02f, (float)atomic_load(&g_system_milli) / 1000.0f));
         } else {
             audio_trigger(KLICK_ROLE_KEYS, 0, fmaxf(0.02f, (float)atomic_load(&g_tap_milli) / 1000.0f), 1.0f, mach_absolute_time());
+        }
+        return @YES;
+    }
+    if ([method isEqualToString:@"demoCue"]) {
+        NSString *kind = args[@"kind"] ?: @"done";
+        float gain = fmaxf(0.02f, (float)atomic_load(&g_system_milli) / 1000.0f);
+        if ([kind isEqualToString:@"needs-you"]) {
+            audio_trigger(KLICK_ROLE_KEYS, -0.2f, gain, 1.0f, mach_absolute_time());
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.12 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                audio_trigger(KLICK_ROLE_KEYS, 0.2f, gain, 1.335f, mach_absolute_time());
+            });
+            [self buddyMood:@"sweat"];
+        } else if ([kind isEqualToString:@"error"]) {
+            audio_trigger_cue(1, gain);
+            [self buddyMood:@"error"];
+        } else {
+            audio_trigger_cue(0, gain);
+            [self buddyMood:@"happy"];
         }
         return @YES;
     }

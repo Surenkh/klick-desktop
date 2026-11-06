@@ -29,17 +29,6 @@
         font: 600 8.5px/1 -apple-system, system-ui, sans-serif;
         letter-spacing: .7px; text-transform: uppercase;
       }
-      #burst {
-        position: absolute; left: -4%; top: -8%; width: 66%; height: 116%;
-        object-fit: contain; opacity: 0; pointer-events: none; z-index: 1;
-        transition: opacity 140ms ease;
-      }
-      #burst.show { opacity: 1; animation: burst 1.1s ease-out; }
-      @keyframes burst {
-        0% { transform: scale(.72) rotate(-6deg); }
-        55% { transform: scale(1.06) rotate(3deg); }
-        100% { transform: scale(1) rotate(0deg); }
-      }
       #tapPill[hidden] { display: none; }
       #celebrate { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
       .confetti {
@@ -172,7 +161,6 @@
     <div id="stage">
       <div id="celebrate"></div>
       <div id="toast"></div>
-      <img id="burst" src="../../assets/buddy/celebrate.png" alt="" />
       <div id="float">
         <div id="char" hidden>
           <img class="klick" id="k0" alt="Kiki" />
@@ -362,21 +350,15 @@
   (function () {
     const celebrate = document.getElementById('celebrate');
     const toast = document.getElementById('toast');
-    const burst = document.getElementById('burst');
     const stage = document.getElementById('stage');
     const api = window.klick || {};
 
     const party = (milestone) => {
-      if (api.debug) api.debug(`celebrate ${milestone} burst=${burst ? burst.naturalWidth : 'none'}`);
+      if (api.debug) api.debug(`celebrate ${milestone}`);
+      // the party pose is the same sprite at the same size: only the mood changes
       if (stage) {
         stage.classList.add('celebrating');
         setTimeout(() => stage.classList.remove('celebrating'), 1150);
-      }
-      if (burst) {
-        burst.classList.remove('show');
-        void burst.offsetWidth;
-        burst.classList.add('show');
-        setTimeout(() => burst.classList.remove('show'), 1150);
       }
       const colors = ['#ffb84d', '#8be0a4', '#7fd1ff', '#ff9ad5', '#ffe066'];
       for (let i = 0; i < 26; i++) {
@@ -415,7 +397,6 @@
       graduation: { file: 'klicky-hat-05-graduation-cap.png', ax: 0.53, ay: 0.70, ratio: 0.53 },
       crown:      { file: 'klicky-hat-06-golden-crown.png',   ax: 0.50, ay: 0.73, ratio: 0.48 }
     };
-    const CHAR_ANCHOR = { x: 0.43, y: 0.245 };
     const hatImg = document.getElementById('hat');
     let currentHat = null;
     let equippedPref = null;
@@ -457,11 +438,6 @@
         if (st) { equippedPref = st.equippedHat || st.equipped || null; applyHat(); }
       }).catch(() => {});
     }
-    window.addEventListener('resize', placeHat);
-    hatImg && hatImg.addEventListener('load', placeHat);
-    window.addEventListener('load', () => {
-      if (burst && api.debug) api.debug(`burst art ${burst.naturalWidth}x${burst.naturalHeight}`);
-    });
   })();
   </script>
   <script>
