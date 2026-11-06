@@ -160,11 +160,11 @@ function applyToControls() {
 }
 
 async function renderAgents() {
-  if (!window.klick.agents) return;
+  const host = $('agents');
+  if (!host || !window.klick.agents) return;
   const status = await window.klick.agents();
   if (!status || typeof status !== 'object') return;
 
-  const host = $('agents');
   host.innerHTML = '';
 
   for (const [id, a] of Object.entries(status)) {
@@ -247,7 +247,7 @@ async function renderAgents() {
     const nextHat = HATS.find((h) => h.level > level);
     const remaining = Math.max(0, next - xp);
     $('xpNext').textContent = nextHat
-      ? `${remaining.toLocaleString('en-US')} XP to Level ${level + 1} — ${nextHat.name} hat`
+      ? `${remaining.toLocaleString('en-US')} XP to Level ${level + 1} — ${nextHat.name}`
       : 'Every hat unlocked. Enjoy the crown.';
 
     paintWardrobe();
@@ -263,8 +263,7 @@ async function renderAgents() {
     host.innerHTML = '';
     for (const hat of HATS) {
       const unlocked = level >= hat.level;
-      // frame only the hat the user actually chose; auto-worn hats stay unframed
-      const equipped = unlocked && explicit === hat.id;
+      const equipped = unlocked && wornId === hat.id;
       const el = document.createElement('button');
       el.className = `hat ${unlocked ? 'unlocked' : 'locked'}${equipped ? ' equipped' : ''}`;
       el.disabled = !unlocked;
@@ -273,10 +272,12 @@ async function renderAgents() {
             ? `<img src="${hatArt(hat.file)}" alt="" />`
             : '<span class="lock">🔒</span>'}</span>` +
         `<span class="name">${hat.name}</span>` +
-        `<span class="need">${unlocked ? (equipped ? 'wearing · click to remove' : `Lv ${hat.level}`) : `🔒 Lv ${hat.level}`}</span>`;
+        `<span class="need">${unlocked ? (equipped ? 'wearing · click to remove' : `Lv ${hat.level}`) : `🔒 Lv ${hat.level}`}</span>` +
+        (equipped ? '<span class="worn-badge">✓</span>' : '');
       if (unlocked) {
         el.addEventListener('click', async () => {
-          const next = explicit === hat.id ? 'none' : hat.id;   // tap twice to remove
+          // worn (chosen or auto) -> take it off; otherwise wear it
+          const next = (wornId === hat.id) ? 'none' : hat.id;
           cfg = await window.klick.setSettings({ equippedHat: next });
           paintStats({ equippedHat: next });
         });
@@ -286,7 +287,7 @@ async function renderAgents() {
 
     // explicit "no hat" option so anyone can take it off
     const none = document.createElement('button');
-    const wearingNone = explicit === 'none';
+    const wearingNone = wornId === null;
     none.className = `hat unlocked${wearingNone ? ' equipped' : ''}`;
     none.innerHTML =
       '<span class="art nohat">🚫</span>' +
