@@ -287,15 +287,11 @@
         lastActivity = Date.now();
         if (!ready) return;
         if (mode === 'sleep') return toIdle(true);
-        const restore = mode === 'press' ? 'idle' : mode;
-        mode = 'press';
-        show('press');
+        // squash only: the old 'press' sprite is an angry face, so keep the
+        // current expression and let the transform do the reacting
         char.classList.add('press');
         if (pressTimer) clearTimeout(pressTimer);
-        pressTimer = setTimeout(() => {
-          char.classList.remove('press');
-          if (mode === 'press') { mode = restore; show(restore); }
-        }, 110);
+        pressTimer = setTimeout(() => char.classList.remove('press'), 110);
         armSleep();
         scheduleBlink();
       });

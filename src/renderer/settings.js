@@ -221,6 +221,7 @@ async function renderAgents() {
   let latestStats = { taps: 0, xp: 0, level: 1, hat: null, equipped: null };
 
   const paintStats = (stats) => {
+    if (stats && stats.equippedHat !== undefined) stats = { ...stats, equipped: stats.equippedHat };
     latestStats = { ...latestStats, ...stats };
     const { taps, xp, level } = latestStats;
     $('stTaps').textContent = taps ?? 0;
@@ -279,7 +280,8 @@ async function renderAgents() {
           // worn (chosen or auto) -> take it off; otherwise wear it
           const next = (wornId === hat.id) ? 'none' : hat.id;
           cfg = await window.klick.setSettings({ equippedHat: next });
-          paintStats({ equippedHat: next });
+          latestStats = { ...latestStats, equipped: next };
+          paintStats({ equipped: next });
         });
       }
       host.appendChild(el);
@@ -295,7 +297,8 @@ async function renderAgents() {
       `<span class="need">${wearingNone ? 'wearing nothing' : 'click to remove'}</span>`;
     none.addEventListener('click', async () => {
       cfg = await window.klick.setSettings({ equippedHat: 'none' });
-      paintStats({ equippedHat: 'none' });
+      latestStats = { ...latestStats, equipped: 'none' };
+      paintStats({ equipped: 'none' });
     });
     host.appendChild(none);
   };
